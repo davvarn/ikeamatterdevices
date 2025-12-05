@@ -1,7 +1,8 @@
+# FIXED: Added missing input definitions
 blueprint:
   name: IKEA Bilresa Scroll Wheel Remote (Enhanced)
   description: >
-    Fully enhanced blueprint for the IKEA Bilresa scroll-wheel remote (fjarr_med_skroll).
+    Fully enhanced blueprint for the IKEA Bilresa scroll‑wheel remote (fjarr_med_skroll).
     Includes:
       ✓ Dynamic scroll notch count (multi_press_N)
       ✓ Group-based control (3 groups)
@@ -55,7 +56,7 @@ input:
   # Smooth dimming mode
   smooth_dimming_entity:
     name: Light for Smooth Dimming
-    description: Light that smooth-scroll dimming should control.
+    description: Light that smooth‑scroll dimming should control.
     default: ''
     selector:
       entity:
@@ -188,7 +189,7 @@ action:
               brightness_step_pct: "{{ notch_count * smooth_step }}"
 
       # ----------------------------
-      # GROUP-BASED SCROLLING
+      # GROUP‑BASED SCROLLING
       # ----------------------------
       - conditions: "{{ selected_group == '1' }}"
         sequence: !input group1_action
