@@ -2,6 +2,24 @@
 
 Control multiple lights with different modes using the IKEA Bilresa (Fjärr med skroll) remote.
 
+## Troubleshooting / Felsökning
+
+**Remote not working?** First, debug what events it's sending:
+
+1. Copy the content of `bilresa-debug-automation.yaml`
+2. In Home Assistant: Settings > Automations > Create Automation
+3. Click ⋮ (three dots) > "Edit in YAML"
+4. Paste the content
+5. Find your device ID:
+   - Settings > Devices & Services > Devices
+   - Click your Bilresa remote
+   - Look at the URL: `.../device/XXXXX` ← that's your device_id
+6. Replace `YOUR_DEVICE_ID` in the automation
+7. Save and press buttons on your remote
+8. Check notifications to see what events are sent
+
+**Fjärrkontrollen fungerar inte?** Debugga först vilka events den skickar (se ovan på engelska).
+
 ## Features
 
 - **3 Groups**: Control up to 3 different lights

@@ -127,7 +127,7 @@ trigger:
 # ========================================
 condition:
   - condition: template
-    value_template: "{{ active_group != '' and active_group != none }}"
+    value_template: "{{ active_group not in ['', 'none', none, 'unknown', 'unavailable'] }}"
 
 # ========================================
 # VARIABLES

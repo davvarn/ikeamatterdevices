@@ -1,0 +1,58 @@
+# ===========================================
+# BILRESA DEBUG AUTOMATION
+# ===========================================
+# Use this to see what events your remote sends
+# 
+# To use:
+# 1. Copy this entire file content
+# 2. Go to Settings > Automations & Scenes > Create Automation
+# 3. Click the 3 dots menu > Edit in YAML
+# 4. Paste this content
+# 5. Replace YOUR_DEVICE_ID with your actual Bilresa device ID
+# 6. Press buttons and scroll wheel
+# 7. Check the trace to see what events are sent
+#
+# To find your device ID:
+# Go to Settings > Devices > Find your Bilresa > Click it > 
+# Look at the URL: ...config/devices/device/XXXXX <- that's your device_id
+# ===========================================
+
+alias: "DEBUG: Bilresa Remote Events"
+description: Shows what events the Bilresa remote sends
+
+trigger:
+  - platform: event
+    event_type: matter_event
+    # REPLACE 'YOUR_DEVICE_ID' WITH YOUR ACTUAL DEVICE ID
+    event_data:
+      device_id: YOUR_DEVICE_ID
+
+condition: []
+
+variables:
+  event_type: "{{ trigger.event.data.type }}"
+  event_data: "{{ trigger.event.data }}"
+  params: "{{ trigger.event.data.params | default('none') }}"
+  new_position: "{{ trigger.event.data.params.new_position | default('none') }}"
+
+action:
+  # Send a notification showing the event details
+  - service: persistent_notification.create
+    data:
+      title: "🎛️ Bilresa Event Detected"
+      message: |
+        **Event Type:** {{ event_type }}
+        **New Position:** {{ new_position }}
+        **Full Event Data:**
+        ```
+        {{ event_data }}
+        ```
+        
+  # Also log it
+  - service: system_log.write
+    data:
+      message: "Bilresa: {{ event_type }} | Position: {{ new_position }} | Data: {{ event_data }}"
+      level: warning
+
+mode: queued
+max: 10
