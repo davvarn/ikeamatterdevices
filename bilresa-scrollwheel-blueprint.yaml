@@ -16,39 +16,31 @@ blueprint:
       description: Select your Bilresa scroll wheel remote.
       selector:
         device: {}
-
-    # Actions
     single_press_action:
       name: Single Press
       default: []
       selector:
         action: {}
-
     double_press_action:
       name: Double Press
       default: []
       selector:
         action: {}
-
     long_press_action:
       name: Long Press
       default: []
       selector:
         action: {}
-
     scroll_up_action:
       name: Scroll Up (simple)
       default: []
       selector:
         action: {}
-
     scroll_down_action:
       name: Scroll Down (simple)
       default: []
       selector:
         action: {}
-
-    # Smooth dimming mode
     smooth_dimming_entity:
       name: Light for Smooth Dimming
       description: Light that smooth‑scroll dimming should control.
@@ -56,7 +48,6 @@ blueprint:
       selector:
         entity:
           domain: light
-
     smooth_step_size:
       name: Smooth Dimming Step Size (%)
       default: 4
@@ -65,20 +56,16 @@ blueprint:
           min: 1
           max: 20
           mode: slider
-
-    # Group-based control
     group1_action:
       name: Group 1 Scroll Action
       default: []
       selector:
         action: {}
-
     group2_action:
       name: Group 2 Scroll Action
       default: []
       selector:
         action: {}
-
     group3_action:
       name: Group 3 Scroll Action
       default: []
