@@ -38,14 +38,14 @@ blueprint:
     # ---------------- GROUP 1 INPUTS ----------------
     g1_header:
       name: "--- GROUP 1 SETTINGS ---"
-      description: "Default actions. (Active if Helper is empty or set to 'Group 1')"
+      description: "Default actions. (Active if Helper is empty or set to Group 1)"
       default: {}
       selector:
         label: {}
 
     action_press_g1:
       name: Press Action (Group 1)
-      description: Action when wheel is clicked. (Tip: Use this to cycle the Input Select to Group 2!)
+      description: "Action when wheel is clicked. (Tip: Use this to cycle the Input Select to Group 2!)"
       default: []
       selector:
         action: {}
@@ -67,7 +67,7 @@ blueprint:
     # ---------------- GROUP 2 INPUTS ----------------
     g2_header:
       name: "--- GROUP 2 SETTINGS ---"
-      description: "Active only if Helper is set to 'Group 2'"
+      description: "Active only if Helper is set to Group 2"
       default: {}
       selector:
         label: {}
@@ -93,7 +93,7 @@ blueprint:
     # ---------------- GROUP 3 INPUTS ----------------
     g3_header:
       name: "--- GROUP 3 SETTINGS ---"
-      description: "Active only if Helper is set to 'Group 3'"
+      description: "Active only if Helper is set to Group 3"
       default: {}
       selector:
         label: {}
@@ -123,8 +123,6 @@ trigger:
   - platform: event
     event_type: matter_event
     event_data:
-      # We do not filter by cluster here to ensure we catch both OnOff and LevelControl
-      # We filter by device_id in the condition
       event_source: !input matter_device_id
 
 variables:
@@ -137,7 +135,6 @@ variables:
   args: "{{ trigger.event.data.args }}"
   
   # Determine current group state
-  # If no helper is provided, force 'Group 1'. Otherwise get state.
   current_group: >
     {% if helper_entity == {} %}
       Group 1
@@ -146,19 +143,13 @@ variables:
     {% endif %}
 
   # --- CLUSTER IDENTIFICATION (Standard Matter) ---
-  # OnOff Cluster = 6 (0x0006)
-  # LevelControl Cluster = 8 (0x0008)
-  
-  # Commands:
-  # OnOff Toggle = 2
-  # LevelControl Move/Step = 2 or 5
-  
+  # OnOff Cluster = 6 (0x0006). Command 2 = Toggle.
   is_press: "{{ cluster_id == 6 and command_id == 2 }}"
   
-  # Scroll logic: LevelControl (8). Command 2 (Step).
-  # Arg 0 = Up/Brighten, Arg 1 = Down/Dim
+  # LevelControl Cluster = 8 (0x0008). Command 2 = Step.
+  # Arg 0 = Up (0) or Down (1)
   is_scroll_up: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[0] == 0 }}"
-  is_scroll_down: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[1] == 1 }}"
+  is_scroll_down: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[0] == 1 }}"
 
 action:
   - choose:
