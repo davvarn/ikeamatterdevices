@@ -3,19 +3,18 @@ blueprint:
   description: >
     Control actions with an IKEA BILRESA Matter Scroll Wheel.
     
-    **Features:**
-    - **Click:** Supports Single Click (via Matter GenericSwitch Cluster 59).
-    - **Scroll:** Supports Rotate Left/Right (via Matter LevelControl Cluster 8).
-    - **Multi-Group:** Optional 'Modes' using a dropdown helper.
+    **Instructions:**
+    1. Select your IKEA Matter Device (Not the entities).
+    2. (Optional) Create a Dropdown Helper (Input Select) for "Modes" (Group 1, Group 2, etc).
+    3. Select the Actions.
     
-    **Troubleshooting:**
-    If actions don't trigger, ensure you selected the correct "Matter Device" 
-    and that the device has not fallen into deep sleep (press the button once to wake it).
+    **Note on Scroll:**
+    This blueprint listens for the raw Matter 'LevelControl' events (Cluster 8) for the smoothest possible scrolling, bypassing the laggy 'multi_press' entities.
   domain: automation
   input:
     matter_device_id:
       name: Matter Device
-      description: Select the IKEA BILRESA device.
+      description: "Select the IKEA BILRESA device itself (do not select the entities)."
       selector:
         device:
           integration: matter
@@ -33,7 +32,7 @@ blueprint:
     # --- GROUP 1 ---
     g1_label:
       name: "--- GROUP 1 SETTINGS ---"
-      description: "Active if Helper is empty or 'Group 1'."
+      description: "Active if Helper is empty or set to 'Group 1'."
       default: {}
       selector:
         label: {}
@@ -61,7 +60,7 @@ blueprint:
     # --- GROUP 2 ---
     g2_label:
       name: "--- GROUP 2 SETTINGS ---"
-      description: "Active if Helper is 'Group 2'."
+      description: "Active if Helper is set to 'Group 2'."
       default: {}
       selector:
         label: {}
@@ -91,7 +90,7 @@ trigger:
   - platform: event
     event_type: matter_event
     event_data:
-      device_id: !input matter_device_id 
+      device_id: !input matter_device_id
 
 variables:
   # Inputs
