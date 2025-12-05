@@ -121,9 +121,13 @@ trigger:
     event_type: zha_event
     event_data:
       device_id: !input remote_device
-  
-  - platform: mqtt
-    topic: zigbee2mqtt/+/action
+
+# ========================================
+# CONDITIONS - Ensure we have required helpers
+# ========================================
+condition:
+  - condition: template
+    value_template: "{{ active_group != '' and active_group != none }}"
 
 # ========================================
 # VARIABLES
@@ -171,28 +175,20 @@ variables:
   # Check if we're in temperature mode (on) or brightness mode (off)
   is_temperature_mode: "{{ is_state(current_mode_helper, 'on') }}"
   
-  # Get the event type from Matter/ZHA events
+  # Get the event type - Matter uses 'type' field
   event_type: >
-    {% if trigger.event is defined and trigger.event.data.type is defined %}
+    {% if trigger.event.data.type is defined %}
       {{ trigger.event.data.type }}
-    {% elif trigger.event is defined and trigger.event.data.command is defined %}
-      {{ trigger.event.data.command }}
     {% else %}
-      none
+      unknown
     {% endif %}
   
-  # Get scroll direction/amount
+  # Get scroll direction/amount - Matter uses new_position in params
   scroll_value: >
-    {% if trigger.event is defined and trigger.event.data.params is defined %}
-      {% if trigger.event.data.params.new_position is defined %}
-        {{ trigger.event.data.params.new_position | int(1) }}
-      {% elif trigger.event.data.params.step_count is defined %}
-        {{ trigger.event.data.params.step_count | int(1) }}
-      {% else %}
-        1
-      {% endif %}
+    {% if trigger.event.data.params is defined and trigger.event.data.params.new_position is defined %}
+      {{ trigger.event.data.params.new_position | int(0) }}
     {% else %}
-      1
+      0
     {% endif %}
 
 # ========================================
@@ -206,7 +202,9 @@ action:
       # ===== SINGLE PRESS: Toggle current light on/off =====
       - conditions:
           - condition: template
-            value_template: "{{ event_type in ['InitialPress', 'Press'] }}"
+            value_template: "{{ event_type == 'InitialPress' }}"
+          - condition: template
+            value_template: "{{ current_light not in ['', 'none', none] }}"
         sequence:
           - service: light.toggle
             target:
@@ -216,6 +214,8 @@ action:
       - conditions:
           - condition: template
             value_template: "{{ event_type == 'MultiPressComplete' }}"
+          - condition: template
+            value_template: "{{ current_mode_helper not in ['', 'none', none] }}"
         sequence:
           - service: input_boolean.toggle
             target:
@@ -224,7 +224,7 @@ action:
       # ===== LONG PRESS: Switch to next group =====
       - conditions:
           - condition: template
-            value_template: "{{ event_type in ['LongPress', 'LongRelease'] }}"
+            value_template: "{{ event_type == 'LongPress' }}"
         sequence:
           - service: input_select.select_next
             target:
@@ -232,47 +232,34 @@ action:
             data:
               cycle: true
       
-      # ===== SCROLL UP: Increase brightness or temperature =====
+      # ===== SCROLL WHEEL: Adjust brightness or temperature =====
       - conditions:
           - condition: template
-            value_template: "{{ event_type == 'SwitchLatched' and scroll_value > 0 }}"
+            value_template: "{{ event_type == 'SwitchLatched' }}"
+          - condition: template
+            value_template: "{{ scroll_value != 0 }}"
+          - condition: template
+            value_template: "{{ current_light not in ['', 'none', none] }}"
         sequence:
           - choose:
-              # Temperature mode
+              # Temperature mode - adjust color temperature
               - conditions:
                   - condition: template
                     value_template: "{{ is_temperature_mode }}"
+                  - condition: template
+                    value_template: "{{ state_attr(current_light, 'color_temp') != none }}"
                 sequence:
                   - service: light.turn_on
                     target:
                       entity_id: "{{ current_light }}"
                     data:
-                      color_temp: "{{ state_attr(current_light, 'color_temp') | int + (temp_step_size * scroll_value) }}"
-            # Brightness mode (default)
-            default:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ current_light }}"
-                data:
-                  brightness_step_pct: "{{ brightness_step_size * scroll_value }}"
-      
-      # ===== SCROLL DOWN: Decrease brightness or temperature =====
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type == 'SwitchLatched' and scroll_value < 0 }}"
-        sequence:
-          - choose:
-              # Temperature mode
-              - conditions:
-                  - condition: template
-                    value_template: "{{ is_temperature_mode }}"
-                sequence:
-                  - service: light.turn_on
-                    target:
-                      entity_id: "{{ current_light }}"
-                    data:
-                      color_temp: "{{ state_attr(current_light, 'color_temp') | int + (temp_step_size * scroll_value) }}"
-            # Brightness mode (default)
+                      color_temp: >
+                        {% set current_temp = state_attr(current_light, 'color_temp') | int(250) %}
+                        {% set new_temp = current_temp + (temp_step_size * scroll_value) %}
+                        {% set min_temp = state_attr(current_light, 'min_mireds') | int(153) %}
+                        {% set max_temp = state_attr(current_light, 'max_mireds') | int(500) %}
+                        {{ [min_temp, [max_temp, new_temp] | min] | max }}
+            # Brightness mode (default) - adjust brightness
             default:
               - service: light.turn_on
                 target:
