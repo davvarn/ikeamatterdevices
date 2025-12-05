@@ -10,7 +10,7 @@ blueprint:
       ✓ Button/scroll automation mapping
     Works with Matter (matter_event), ZHA (zha_event), and Zigbee2MQTT (mqtt payloads).
   domain: automation
-  input:
+  inputs:
     remote_device:
       name: Bilresa Remote Device
       description: Select your Bilresa scroll wheel remote.
