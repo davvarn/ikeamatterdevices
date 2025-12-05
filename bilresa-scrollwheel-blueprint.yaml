@@ -10,84 +10,80 @@ blueprint:
       ✓ Button/scroll automation mapping
     Works with Matter (matter_event), ZHA (zha_event), and Zigbee2MQTT (mqtt payloads).
   domain: automation
+  input:
+    remote_device:
+      name: Bilresa Remote Device
+      description: Select your Bilresa scroll wheel remote.
+      selector:
+        device: {}
 
-# ----------------------------
-# Inputs
-# ----------------------------
-input:
-  remote_device:
-    name: Bilresa Remote Device
-    description: Select your Bilresa scroll wheel remote.
-    selector:
-      device: {}
+    # Actions
+    single_press_action:
+      name: Single Press
+      default: []
+      selector:
+        action: {}
 
-  # Actions
-  single_press_action:
-    name: Single Press
-    default: []
-    selector:
-      action: {}
+    double_press_action:
+      name: Double Press
+      default: []
+      selector:
+        action: {}
 
-  double_press_action:
-    name: Double Press
-    default: []
-    selector:
-      action: {}
+    long_press_action:
+      name: Long Press
+      default: []
+      selector:
+        action: {}
 
-  long_press_action:
-    name: Long Press
-    default: []
-    selector:
-      action: {}
+    scroll_up_action:
+      name: Scroll Up (simple)
+      default: []
+      selector:
+        action: {}
 
-  scroll_up_action:
-    name: Scroll Up (simple)
-    default: []
-    selector:
-      action: {}
+    scroll_down_action:
+      name: Scroll Down (simple)
+      default: []
+      selector:
+        action: {}
 
-  scroll_down_action:
-    name: Scroll Down (simple)
-    default: []
-    selector:
-      action: {}
+    # Smooth dimming mode
+    smooth_dimming_entity:
+      name: Light for Smooth Dimming
+      description: Light that smooth‑scroll dimming should control.
+      default: ''
+      selector:
+        entity:
+          domain: light
 
-  # Smooth dimming mode
-  smooth_dimming_entity:
-    name: Light for Smooth Dimming
-    description: Light that smooth‑scroll dimming should control.
-    default: ''
-    selector:
-      entity:
-        domain: light
+    smooth_step_size:
+      name: Smooth Dimming Step Size (%)
+      default: 4
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: slider
 
-  smooth_step_size:
-    name: Smooth Dimming Step Size (%)
-    default: 4
-    selector:
-      number:
-        min: 1
-        max: 20
-        mode: slider
+    # Group-based control
+    group1_action:
+      name: Group 1 Scroll Action
+      default: []
+      selector:
+        action: {}
 
-  # Group-based control
-  group1_action:
-    name: Group 1 Scroll Action
-    default: []
-    selector:
-      action: {}
+    group2_action:
+      name: Group 2 Scroll Action
+      default: []
+      selector:
+        action: {}
 
-  group2_action:
-    name: Group 2 Scroll Action
-    default: []
-    selector:
-      action: {}
-
-  group3_action:
-    name: Group 3 Scroll Action
-    default: []
-    selector:
-      action: {}
+    group3_action:
+      name: Group 3 Scroll Action
+      default: []
+      selector:
+        action: {}
 
 # ----------------------------
 # Triggers
