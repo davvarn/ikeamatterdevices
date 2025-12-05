@@ -1,270 +1,158 @@
 blueprint:
-  name: IKEA Bilresa Scroll Wheel Remote
+  name: IKEA BILRESA Scroll Wheel Remote Controller
   description: |
-    Control multiple lights with modes using the IKEA Bilresa scroll wheel remote.
-    - Single press: Toggle light on/off
-    - Double press: Switch between brightness and temperature modes
-    - Long press: Switch to next group/light
-    - Scroll wheel: Adjust brightness or temperature based on current mode
+    Professional automation blueprint for the IKEA BILRESA Matter remote.
+    
+    Controls up to 3 groups:
+    - Group 1 (Buttons 1/3/5): Lights - Toggle on single press, dim/brighten on scroll (multi-press).
+    - Group 2 (Buttons 2/4): Media - Play/pause on single, volume up/down on scroll.
+    - Group 3 (Buttons 6/7/8/9): Covers - Open/close on single, position adjust on scroll.
+    
+    Requires Matter integration. Scroll notches = press_count (1-18) for stepped control.
   domain: automation
   input:
-    # ========================================
-    # DEVICE SELECTION
-    # ========================================
     remote_device:
-      name: 🎛️ Remote Device
-      description: Select your Bilresa scroll wheel remote
+      name: BILRESA Remote Device
+      description: Select the Matter BILRESA device (IKEA of Sweden).
       selector:
-        device: {}
-    
-    # ========================================
-    # GROUP 1 - LIGHT CONTROL
-    # ========================================
-    group1_light:
-      name: "💡 Group 1 - Light"
-      description: "First light to control"
-      default: ""
-      selector:
-        entity:
-          domain: light
-    
-    group1_mode_helper:
-      name: "🔄 Group 1 - Mode Helper"
-      description: "Input boolean to track mode (brightness vs temperature). Create one via Settings > Devices > Helpers"
-      default: ""
-      selector:
-        entity:
-          domain: input_boolean
-    
-    # ========================================
-    # GROUP 2 - LIGHT CONTROL
-    # ========================================
-    group2_light:
-      name: "💡 Group 2 - Light"
-      description: "Second light to control"
-      default: ""
+        device:
+          integration: matter
+          manufacturer: "IKEA of Sweden"
+          model: "BILRESA scroll wheel"
+    light_entity:
+      name: Light Entity (Group 1)
+      description: Light(s) for toggle/dimming (e.g., light.living_room).
+      default: {}
       selector:
         entity:
           domain: light
-    
-    group2_mode_helper:
-      name: "🔄 Group 2 - Mode Helper"
-      description: "Input boolean to track mode (brightness vs temperature)"
-      default: ""
+    media_entity:
+      name: Media Player (Group 2)
+      description: Speaker for volume/playback (e.g., media_player.tv).
+      default: {}
       selector:
         entity:
-          domain: input_boolean
-    
-    # ========================================
-    # GROUP 3 - LIGHT CONTROL
-    # ========================================
-    group3_light:
-      name: "💡 Group 3 - Light"
-      description: "Third light to control"
-      default: ""
+          domain: media_player
+    cover_entity:
+      name: Cover Entity (Group 3)
+      description: Blinds/shades for position control (e.g., cover.kitchen_blinds).
+      default: {}
       selector:
         entity:
-          domain: light
-    
-    group3_mode_helper:
-      name: "🔄 Group 3 - Mode Helper"
-      description: "Input boolean to track mode (brightness vs temperature)"
-      default: ""
-      selector:
-        entity:
-          domain: input_boolean
-    
-    # ========================================
-    # SETTINGS
-    # ========================================
-    active_group_helper:
-      name: "🎯 Active Group Helper"
-      description: "Input select to track which group (1, 2, or 3) is active. Create with options: '1', '2', '3'"
-      selector:
-        entity:
-          domain: input_select
-    
+          domain: cover
     brightness_step:
-      name: "📊 Brightness Step"
-      description: "How much to change brightness per scroll notch"
-      default: 10
+      name: Brightness/Volume Step %
+      description: Adjustment per scroll notch (default: 5%).
+      default: 5
       selector:
         number:
           min: 1
-          max: 50
-          step: 1
+          max: 20
           unit_of_measurement: "%"
-          mode: slider
-    
-    temperature_step:
-      name: "🌡️ Temperature Step"
-      description: "How much to change color temperature per scroll notch (mireds)"
-      default: 20
+    position_step:
+      name: Cover Position Step %
+      description: Adjustment per scroll notch for blinds (default: 10%).
+      default: 10
       selector:
         number:
           min: 5
-          max: 100
-          step: 5
-          unit_of_measurement: "mireds"
-          mode: slider
+          max: 50
+          unit_of_measurement: "%"
 
-# ========================================
-# TRIGGERS
-# ========================================
+variables:
+  press_number: "{{ trigger.event.data.button_number }}"
+  press_count: "{{ trigger.event.data.press_count | int(1) }}"
+  step_pct: !input brightness_step
+  pos_step: !input position_step
+  light_ent: !input light_entity
+  media_ent: !input media_entity
+  cover_ent: !input cover_entity
+
 trigger:
   - platform: event
-    event_type: matter_event
-    event_data:
-      device_id: !input remote_device
-  
-  - platform: event
-    event_type: zha_event
+    event_type: matter_button_press
     event_data:
       device_id: !input remote_device
 
-# ========================================
-# CONDITIONS - Ensure we have required helpers
-# ========================================
-condition:
-  - condition: template
-    value_template: "{{ active_group not in ['', 'none', none, 'unknown', 'unavailable'] }}"
-
-# ========================================
-# VARIABLES
-# ========================================
-variables:
-  active_group: !input active_group_helper
-  brightness_step_size: !input brightness_step
-  temp_step_size: !input temperature_step
-  
-  group1_light: !input group1_light
-  group2_light: !input group2_light
-  group3_light: !input group3_light
-  
-  group1_mode: !input group1_mode_helper
-  group2_mode: !input group2_mode_helper
-  group3_mode: !input group3_mode_helper
-  
-  # Get current group (1, 2, or 3)
-  current_group: "{{ states(active_group) }}"
-  
-  # Get light for current group
-  current_light: >
-    {% if states(active_group) == '1' %}
-      {{ group1_light }}
-    {% elif states(active_group) == '2' %}
-      {{ group2_light }}
-    {% elif states(active_group) == '3' %}
-      {{ group3_light }}
-    {% else %}
-      none
-    {% endif %}
-  
-  # Get mode helper for current group
-  current_mode_helper: >
-    {% if states(active_group) == '1' %}
-      {{ group1_mode }}
-    {% elif states(active_group) == '2' %}
-      {{ group2_mode }}
-    {% elif states(active_group) == '3' %}
-      {{ group3_mode }}
-    {% else %}
-      none
-    {% endif %}
-  
-  # Check if we're in temperature mode (on) or brightness mode (off)
-  is_temperature_mode: "{{ is_state(current_mode_helper, 'on') }}"
-  
-  # Get the event type - Matter uses 'type' field
-  event_type: >
-    {% if trigger.event.data.type is defined %}
-      {{ trigger.event.data.type }}
-    {% else %}
-      unknown
-    {% endif %}
-  
-  # Get scroll direction/amount - Matter uses new_position in params
-  scroll_value: >
-    {% if trigger.event.data.params is defined and trigger.event.data.params.new_position is defined %}
-      {{ trigger.event.data.params.new_position | int(0) }}
-    {% else %}
-      0
-    {% endif %}
-
-# ========================================
-# ACTIONS
-# ========================================
-mode: restart
-max_exceeded: silent
+condition: []
 
 action:
   - choose:
-      # ===== SINGLE PRESS: Toggle current light on/off =====
+      # Group 1: Lights (Buttons 1,3,5)
       - conditions:
           - condition: template
-            value_template: "{{ event_type == 'InitialPress' }}"
-          - condition: template
-            value_template: "{{ current_light not in ['', 'none', none] }}"
+            value_template: "{{ press_number in [1, 3, 5] }}"
         sequence:
-          - service: light.toggle
-            target:
-              entity_id: "{{ current_light }}"
-      
-      # ===== DOUBLE PRESS: Toggle between brightness and temperature modes =====
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type == 'MultiPressComplete' }}"
-          - condition: template
-            value_template: "{{ current_mode_helper not in ['', 'none', none] }}"
-        sequence:
-          - service: input_boolean.toggle
-            target:
-              entity_id: "{{ current_mode_helper }}"
-      
-      # ===== LONG PRESS: Switch to next group =====
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type == 'LongPress' }}"
-        sequence:
-          - service: input_select.select_next
-            target:
-              entity_id: "{{ active_group }}"
-            data:
-              cycle: true
-      
-      # ===== SCROLL WHEEL: Adjust brightness or temperature =====
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type == 'SwitchLatched' }}"
-          - condition: template
-            value_template: "{{ scroll_value != 0 }}"
-          - condition: template
-            value_template: "{{ current_light not in ['', 'none', none] }}"
-        sequence:
-          - choose:
-              # Temperature mode - adjust color temperature
-              - conditions:
+          - if:
+              - condition: template
+                value_template: "{{ press_count == 1 }}"
+            then:
+              - if:
                   - condition: template
-                    value_template: "{{ is_temperature_mode }}"
-                  - condition: template
-                    value_template: "{{ state_attr(current_light, 'color_temp') != none }}"
-                sequence:
+                    value_template: "{{ press_number == 1 }}"
+                then:
+                  - service: light.toggle
+                    target:
+                      entity_id: "{{ light_ent }}"
+                else:
                   - service: light.turn_on
                     target:
-                      entity_id: "{{ current_light }}"
+                      entity_id: "{{ light_ent }}"
                     data:
-                      color_temp: >
-                        {% set current_temp = state_attr(current_light, 'color_temp') | int(250) %}
-                        {% set new_temp = current_temp + (temp_step_size * scroll_value) %}
-                        {% set min_temp = state_attr(current_light, 'min_mireds') | int(153) %}
-                        {% set max_temp = state_attr(current_light, 'max_mireds') | int(500) %}
-                        {{ [min_temp, [max_temp, new_temp] | min] | max }}
-            # Brightness mode (default) - adjust brightness
-            default:
-              - service: light.turn_on
+                      brightness_step_pct: "{{ step_pct * press_count if press_number == 3 else -step_pct * press_count }}"
+      # Group 2: Media (Buttons 2,4)
+      - conditions:
+          - condition: template
+            value_template: "{{ press_number in [2, 4] }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ press_count == 1 }}"
+            then:
+              - service: media_player.media_play_pause
                 target:
-                  entity_id: "{{ current_light }}"
+                  entity_id: "{{ media_ent }}"
+            else:
+              - service: media_player.volume_set
+                target:
+                  entity_id: "{{ media_ent }}"
                 data:
-                  brightness_step_pct: "{{ brightness_step_size * scroll_value }}"
-    
-    default: []
+                  volume_level: >-
+                    {% set current_vol = state_attr(media_ent, 'volume_level') | float(0.5) %}
+                    {% set delta = step_pct / 100 * press_count %}
+                    {% set new_vol = [0.0, 1.0] | max([0.0, 1.0] | min(current_vol + (delta if press_number == 2 else -delta))) %}
+                    {{ new_vol }}
+      # Group 3: Covers (Buttons 6,7,8,9)
+      - conditions:
+          - condition: template
+            value_template: "{{ press_number in [6, 7, 8, 9] }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ press_count == 1 }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ press_number in [6, 8] }}"
+                then:
+                  - service: cover.open_cover
+                    target:
+                      entity_id: "{{ cover_ent }}"
+                else:
+                  - service: cover.close_cover
+                    target:
+                      entity_id: "{{ cover_ent }}"
+            else:
+              - service: cover.set_cover_position
+                target:
+                  entity_id: "{{ cover_ent }}"
+                data:
+                  position: >-
+                    {% set current_pos = state_attr(cover_ent, 'current_position') | int(50) %}
+                    {% set delta = pos_step * press_count %}
+                    {% set new_pos = [0, 100] | max([0, 100] | min(current_pos + (delta if press_number in [6,7] else -delta))) %}
+                    {{ new_pos }}
+    default: []  # Ignore unassigned buttons
+  mode: queued
+  max: 10  # Queue fast scrolls
+  max_exceeded: silent
