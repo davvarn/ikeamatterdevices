@@ -41,8 +41,8 @@ blueprint:
         entity:
           domain: cover
     brightness_step:
-      name: Brightness/Volume Step %
-      description: Adjustment per scroll notch (default: 5%).
+      name: Brightness/Volume Step
+      description: "Adjustment per scroll notch (default: 5%)"
       default: 5
       selector:
         number:
@@ -50,8 +50,8 @@ blueprint:
           max: 20
           unit_of_measurement: "%"
     position_step:
-      name: Cover Position Step %
-      description: Adjustment per scroll notch for blinds (default: 10%).
+      name: Cover Position Step
+      description: "Adjustment per scroll notch for blinds (default: 10%)"
       default: 10
       selector:
         number:
