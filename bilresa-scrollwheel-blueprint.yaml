@@ -1,158 +1,205 @@
 blueprint:
-  name: IKEA BILRESA Scroll Wheel Remote Controller
-  description: |
-    Professional automation blueprint for the IKEA BILRESA Matter remote.
+  name: IKEA Matter Scroll Wheel (Multi-Group)
+  description: >
+    Control actions with an IKEA Matter Scroll Wheel (or similar Matter rotary devices).
     
-    Controls up to 3 groups:
-    - Group 1 (Buttons 1/3/5): Lights - Toggle on single press, dim/brighten on scroll (multi-press).
-    - Group 2 (Buttons 2/4): Media - Play/pause on single, volume up/down on scroll.
-    - Group 3 (Buttons 6/7/8/9): Covers - Open/close on single, position adjust on scroll.
+    Supports:
+    - Center Press (Click)
+    - Scroll Up (Rotate Right)
+    - Scroll Down (Rotate Left)
     
-    Requires Matter integration. Scroll notches = press_count (1-18) for stepped control.
+    **Group Logic:**
+    Optionally link an Input Select (Dropdown) helper to enable "Modes". 
+    If defined, the blueprint checks the state of the helper to determine which 
+    set of actions to run (Group 1, 2, or 3).
+    
+    **Note:** This blueprint listens for `matter_event`. Ensure your device ID is correct.
   domain: automation
   input:
-    remote_device:
-      name: BILRESA Remote Device
-      description: 'Select the Matter BILRESA device (IKEA of Sweden).'
+    matter_device_id:
+      name: Matter Device
+      description: Select the IKEA Matter device.
       selector:
         device:
           integration: matter
-          manufacturer: 'IKEA of Sweden'
-          model: 'BILRESA scroll wheel'
-    light_entity:
-      name: Light Entity (Group 1)
-      description: 'Light(s) for toggle/dimming (e.g., light.living_room).'
-      default: {}
-      selector:
-        entity:
-          domain: light
-    media_entity:
-      name: Media Player (Group 2)
-      description: 'Speaker for volume/playback (e.g., media_player.tv).'
-      default: {}
-      selector:
-        entity:
-          domain: media_player
-    cover_entity:
-      name: Cover Entity (Group 3)
-      description: 'Blinds/shades for position control (e.g., cover.kitchen_blinds).'
-      default: {}
-      selector:
-        entity:
-          domain: cover
-    brightness_step:
-      name: Brightness/Volume Step %
-      description: 'Adjustment per scroll notch (default: 5%).'
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 20
-          unit_of_measurement: '%'
-    position_step:
-      name: Cover Position Step %
-      description: 'Adjustment per scroll notch for blinds (default: 10%).'
-      default: 10
-      selector:
-        number:
-          min: 5
-          max: 50
-          unit_of_measurement: '%'
+          multiple: false
 
-variables:
-  press_number: "{{ trigger.event.data.button_number }}"
-  press_count: "{{ trigger.event.data.press_count | int(1) }}"
-  step_pct: !input brightness_step
-  pos_step: !input position_step
-  light_ent: !input light_entity
-  media_ent: !input media_entity
-  cover_ent: !input cover_entity
+    group_helper:
+      name: Group Helper (Optional)
+      description: >
+        An Input Select entity to track the current group/mode. 
+        If left empty, only "Group 1" actions will ever execute.
+      default: {}
+      selector:
+        entity:
+          domain: input_select
+          multiple: false
+
+    # ---------------- GROUP 1 INPUTS ----------------
+    g1_header:
+      name: "--- GROUP 1 SETTINGS ---"
+      description: "Default actions. (Active if Helper is empty or set to 'Group 1')"
+      default: {}
+      selector:
+        label: {}
+
+    action_press_g1:
+      name: Press Action (Group 1)
+      description: Action when wheel is clicked. (Tip: Use this to cycle the Input Select to Group 2!)
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_up_g1:
+      name: Scroll Up / Right (Group 1)
+      description: Action when rotated clockwise.
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_down_g1:
+      name: Scroll Down / Left (Group 1)
+      description: Action when rotated counter-clockwise.
+      default: []
+      selector:
+        action: {}
+
+    # ---------------- GROUP 2 INPUTS ----------------
+    g2_header:
+      name: "--- GROUP 2 SETTINGS ---"
+      description: "Active only if Helper is set to 'Group 2'"
+      default: {}
+      selector:
+        label: {}
+
+    action_press_g2:
+      name: Press Action (Group 2)
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_up_g2:
+      name: Scroll Up / Right (Group 2)
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_down_g2:
+      name: Scroll Down / Left (Group 2)
+      default: []
+      selector:
+        action: {}
+
+    # ---------------- GROUP 3 INPUTS ----------------
+    g3_header:
+      name: "--- GROUP 3 SETTINGS ---"
+      description: "Active only if Helper is set to 'Group 3'"
+      default: {}
+      selector:
+        label: {}
+
+    action_press_g3:
+      name: Press Action (Group 3)
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_up_g3:
+      name: Scroll Up / Right (Group 3)
+      default: []
+      selector:
+        action: {}
+
+    action_scroll_down_g3:
+      name: Scroll Down / Left (Group 3)
+      default: []
+      selector:
+        action: {}
+
+mode: restart
+max_exceeded: silent
 
 trigger:
   - platform: event
-    event_type: matter_button_press
+    event_type: matter_event
     event_data:
-      device_id: !input remote_device
+      # We do not filter by cluster here to ensure we catch both OnOff and LevelControl
+      # We filter by device_id in the condition
+      event_source: !input matter_device_id
 
-condition: []
+variables:
+  # Inputs
+  helper_entity: !input group_helper
+  
+  # Event Data
+  cluster_id: "{{ trigger.event.data.cluster_id }}"
+  command_id: "{{ trigger.event.data.command_id }}"
+  args: "{{ trigger.event.data.args }}"
+  
+  # Determine current group state
+  # If no helper is provided, force 'Group 1'. Otherwise get state.
+  current_group: >
+    {% if helper_entity == {} %}
+      Group 1
+    {% else %}
+      {{ states(helper_entity) }}
+    {% endif %}
+
+  # --- CLUSTER IDENTIFICATION (Standard Matter) ---
+  # OnOff Cluster = 6 (0x0006)
+  # LevelControl Cluster = 8 (0x0008)
+  
+  # Commands:
+  # OnOff Toggle = 2
+  # LevelControl Move/Step = 2 or 5
+  
+  is_press: "{{ cluster_id == 6 and command_id == 2 }}"
+  
+  # Scroll logic: LevelControl (8). Command 2 (Step).
+  # Arg 0 = Up/Brighten, Arg 1 = Down/Dim
+  is_scroll_up: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[0] == 0 }}"
+  is_scroll_down: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[1] == 1 }}"
 
 action:
   - choose:
-      # Group 1: Lights (Buttons 1,3,5)
+      # ------------------------------------------------------
+      # GROUP 1 LOGIC
+      # ------------------------------------------------------
       - conditions:
-          - condition: template
-            value_template: "{{ press_number in [1, 3, 5] }}"
+          - "{{ current_group == 'Group 1' }}"
         sequence:
-          - if:
-              - condition: template
-                value_template: "{{ press_count == 1 }}"
-            then:
-              - if:
-                  - condition: template
-                    value_template: "{{ press_number == 1 }}"
-                then:
-                  - service: light.toggle
-                    target:
-                      entity_id: "{{ light_ent }}"
-                else:
-                  - service: light.turn_on
-                    target:
-                      entity_id: "{{ light_ent }}"
-                    data:
-                      brightness_step_pct: "{{ step_pct * press_count if press_number == 3 else -step_pct * press_count }}"
-      # Group 2: Media (Buttons 2,4)
+          - choose:
+              - conditions: "{{ is_press }}"
+                sequence: !input action_press_g1
+              - conditions: "{{ is_scroll_up }}"
+                sequence: !input action_scroll_up_g1
+              - conditions: "{{ is_scroll_down }}"
+                sequence: !input action_scroll_down_g1
+
+      # ------------------------------------------------------
+      # GROUP 2 LOGIC
+      # ------------------------------------------------------
       - conditions:
-          - condition: template
-            value_template: "{{ press_number in [2, 4] }}"
+          - "{{ current_group == 'Group 2' }}"
         sequence:
-          - if:
-              - condition: template
-                value_template: "{{ press_count == 1 }}"
-            then:
-              - service: media_player.media_play_pause
-                target:
-                  entity_id: "{{ media_ent }}"
-            else:
-              - service: media_player.volume_set
-                target:
-                  entity_id: "{{ media_ent }}"
-                data:
-                  volume_level: >-
-                    {% set current_vol = state_attr(media_ent, 'volume_level') | float(0.5) %}
-                    {% set delta = step_pct / 100 * press_count %}
-                    {% set new_vol = [0.0, 1.0] | max([0.0, 1.0] | min(current_vol + (delta if press_number == 2 else -delta))) %}
-                    {{ new_vol }}
-      # Group 3: Covers (Buttons 6,7,8,9)
+          - choose:
+              - conditions: "{{ is_press }}"
+                sequence: !input action_press_g2
+              - conditions: "{{ is_scroll_up }}"
+                sequence: !input action_scroll_up_g2
+              - conditions: "{{ is_scroll_down }}"
+                sequence: !input action_scroll_down_g2
+
+      # ------------------------------------------------------
+      # GROUP 3 LOGIC
+      # ------------------------------------------------------
       - conditions:
-          - condition: template
-            value_template: "{{ press_number in [6, 7, 8, 9] }}"
+          - "{{ current_group == 'Group 3' }}"
         sequence:
-          - if:
-              - condition: template
-                value_template: "{{ press_count == 1 }}"
-            then:
-              - if:
-                  - condition: template
-                    value_template: "{{ press_number in [6, 8] }}"
-                then:
-                  - service: cover.open_cover
-                    target:
-                      entity_id: "{{ cover_ent }}"
-                else:
-                  - service: cover.close_cover
-                    target:
-                      entity_id: "{{ cover_ent }}"
-            else:
-              - service: cover.set_cover_position
-                target:
-                  entity_id: "{{ cover_ent }}"
-                data:
-                  position: >-
-                    {% set current_pos = state_attr(cover_ent, 'current_position') | int(50) %}
-                    {% set delta = pos_step * press_count %}
-                    {% set new_pos = [0, 100] | max([0, 100] | min(current_pos + (delta if press_number in [6,7] else -delta))) %}
-                    {{ new_pos }}
-    default: []  # Ignore unassigned buttons
-  mode: queued
-  max: 10  # Queue fast scrolls
-  max_exceeded: silent
+          - choose:
+              - conditions: "{{ is_press }}"
+                sequence: !input action_press_g3
+              - conditions: "{{ is_scroll_up }}"
+                sequence: !input action_scroll_up_g3
+              - conditions: "{{ is_scroll_down }}"
+                sequence: !input action_scroll_down_g3
