@@ -13,51 +13,51 @@ blueprint:
   input:
     remote_device:
       name: BILRESA Remote Device
-      description: Select the Matter BILRESA device (IKEA of Sweden).
+      description: 'Select the Matter BILRESA device (IKEA of Sweden).'
       selector:
         device:
           integration: matter
-          manufacturer: "IKEA of Sweden"
-          model: "BILRESA scroll wheel"
+          manufacturer: 'IKEA of Sweden'
+          model: 'BILRESA scroll wheel'
     light_entity:
       name: Light Entity (Group 1)
-      description: Light(s) for toggle/dimming (e.g., light.living_room).
+      description: 'Light(s) for toggle/dimming (e.g., light.living_room).'
       default: {}
       selector:
         entity:
           domain: light
     media_entity:
       name: Media Player (Group 2)
-      description: Speaker for volume/playback (e.g., media_player.tv).
+      description: 'Speaker for volume/playback (e.g., media_player.tv).'
       default: {}
       selector:
         entity:
           domain: media_player
     cover_entity:
       name: Cover Entity (Group 3)
-      description: Blinds/shades for position control (e.g., cover.kitchen_blinds).
+      description: 'Blinds/shades for position control (e.g., cover.kitchen_blinds).'
       default: {}
       selector:
         entity:
           domain: cover
     brightness_step:
-      name: Brightness/Volume Step
-      description: "Adjustment per scroll notch (default: 5%)"
+      name: Brightness/Volume Step %
+      description: 'Adjustment per scroll notch (default: 5%).'
       default: 5
       selector:
         number:
           min: 1
           max: 20
-          unit_of_measurement: "%"
+          unit_of_measurement: '%'
     position_step:
-      name: Cover Position Step
-      description: "Adjustment per scroll notch for blinds (default: 10%)"
+      name: Cover Position Step %
+      description: 'Adjustment per scroll notch for blinds (default: 10%).'
       default: 10
       selector:
         number:
           min: 5
           max: 50
-          unit_of_measurement: "%"
+          unit_of_measurement: '%'
 
 variables:
   press_number: "{{ trigger.event.data.button_number }}"
