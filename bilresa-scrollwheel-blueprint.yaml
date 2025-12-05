@@ -1,24 +1,23 @@
 blueprint:
-  name: IKEA Matter Scroll Wheel (Multi-Group)
+  name: IKEA BILRESA Matter Scroll Wheel
   description: >
-    Control actions with an IKEA Matter Scroll Wheel (or similar Matter rotary devices).
+    "Advanced controller for the IKEA BILRESA Matter Scroll Wheel.
     
-    Supports:
-    - Center Press (Click)
-    - Scroll Up (Rotate Right)
-    - Scroll Down (Rotate Left)
+    **Features:**
+    - **Click:** Recognized via Matter Generic Switch (Cluster 59).
+    - **Scroll:** Recognized via Matter LevelControl (Cluster 8).
+    - **Multi-Group Support:** Optionally link an Input Select helper to toggle between modes (e.g., Lights, Media, Blinds).
     
-    **Group Logic:**
-    Optionally link an Input Select (Dropdown) helper to enable "Modes". 
-    If defined, the blueprint checks the state of the helper to determine which 
-    set of actions to run (Group 1, 2, or 3).
+    **Instructions:**
+    1. Select your IKEA Matter Device.
+    2. (Optional) Create a Dropdown Helper (Input Select) with names like 'Group 1', 'Group 2' and select it below.
+    3. Map your actions for each group."
     
-    **Note:** This blueprint listens for `matter_event`. Ensure your device ID is correct.
   domain: automation
   input:
     matter_device_id:
       name: Matter Device
-      description: Select the IKEA Matter device.
+      description: Select the IKEA BILRESA device.
       selector:
         device:
           integration: matter
@@ -27,53 +26,53 @@ blueprint:
     group_helper:
       name: Group Helper (Optional)
       description: >
-        An Input Select entity to track the current group/mode. 
-        If left empty, only "Group 1" actions will ever execute.
+        "An Input Select entity to track the current group/mode. 
+        If left empty, only 'Group 1' actions will ever execute."
       default: {}
       selector:
         entity:
           domain: input_select
           multiple: false
 
-    # ---------------- GROUP 1 INPUTS ----------------
-    g1_header:
+    # ---------------- GROUP 1 ----------------
+    g1_label:
       name: "--- GROUP 1 SETTINGS ---"
       description: "Default actions. (Active if Helper is empty or set to Group 1)"
       default: {}
       selector:
         label: {}
 
-    action_press_g1:
-      name: Press Action (Group 1)
-      description: "Action when wheel is clicked. (Tip: Use this to cycle the Input Select to Group 2!)"
+    action_click_g1:
+      name: Single Click (Group 1)
+      description: "Action for single press. (Recommended: 'Input Select: Select next' to switch groups)"
       default: []
       selector:
         action: {}
 
     action_scroll_up_g1:
       name: Scroll Up / Right (Group 1)
-      description: Action when rotated clockwise.
+      description: "Action when rotating clockwise (e.g., Brightness Up)."
       default: []
       selector:
         action: {}
 
     action_scroll_down_g1:
       name: Scroll Down / Left (Group 1)
-      description: Action when rotated counter-clockwise.
+      description: "Action when rotating counter-clockwise (e.g., Brightness Down)."
       default: []
       selector:
         action: {}
 
-    # ---------------- GROUP 2 INPUTS ----------------
-    g2_header:
+    # ---------------- GROUP 2 ----------------
+    g2_label:
       name: "--- GROUP 2 SETTINGS ---"
-      description: "Active only if Helper is set to Group 2"
+      description: "Active only if Helper is set to 'Group 2'"
       default: {}
       selector:
         label: {}
 
-    action_press_g2:
-      name: Press Action (Group 2)
+    action_click_g2:
+      name: Single Click (Group 2)
       default: []
       selector:
         action: {}
@@ -90,16 +89,16 @@ blueprint:
       selector:
         action: {}
 
-    # ---------------- GROUP 3 INPUTS ----------------
-    g3_header:
+    # ---------------- GROUP 3 ----------------
+    g3_label:
       name: "--- GROUP 3 SETTINGS ---"
-      description: "Active only if Helper is set to Group 3"
+      description: "Active only if Helper is set to 'Group 3'"
       default: {}
       selector:
         label: {}
 
-    action_press_g3:
-      name: Press Action (Group 3)
+    action_click_g3:
+      name: Single Click (Group 3)
       default: []
       selector:
         action: {}
@@ -126,15 +125,15 @@ trigger:
       event_source: !input matter_device_id
 
 variables:
-  # Inputs
+  # --- INPUTS ---
   helper_entity: !input group_helper
   
-  # Event Data
+  # --- EVENT DATA ---
   cluster_id: "{{ trigger.event.data.cluster_id }}"
   command_id: "{{ trigger.event.data.command_id }}"
   args: "{{ trigger.event.data.args }}"
   
-  # Determine current group state
+  # --- GROUP LOGIC ---
   current_group: >
     {% if helper_entity == {} %}
       Group 1
@@ -142,54 +141,69 @@ variables:
       {{ states(helper_entity) }}
     {% endif %}
 
-  # --- CLUSTER IDENTIFICATION (Standard Matter) ---
-  # OnOff Cluster = 6 (0x0006). Command 2 = Toggle.
-  is_press: "{{ cluster_id == 6 and command_id == 2 }}"
+  # --- CLUSTER DECODING ---
   
-  # LevelControl Cluster = 8 (0x0008). Command 2 = Step.
-  # Arg 0 = Up (0) or Down (1)
-  is_scroll_up: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[0] == 0 }}"
-  is_scroll_down: "{{ cluster_id == 8 and (command_id == 2 or command_id == 5) and args[0] == 1 }}"
+  # 1. CLICK DETECTION (Generic Switch Cluster = 59 / 0x003B)
+  # Based on your image: 'multi_press_1' usually maps to MultiPressComplete (Cmd 6) with count 1.
+  # We also accept ShortRelease (Cmd 2) as a fallback for faster response if supported.
+  is_click: >
+    {{ 
+      (cluster_id == 59 and command_id == 6 and (args.totalNumberOfPressesCounted | default(1) == 1))
+      or
+      (cluster_id == 59 and command_id == 2)
+    }}
+
+  # 2. SCROLL DETECTION (LevelControl Cluster = 8 / 0x0008)
+  # Command 2 = Step. 
+  # args.stepMode (or args[0]): 0 = Up, 1 = Down.
+  # Note: Some firmware versions use Move (Cmd 5), but Step is standard for wheels.
+  is_scroll_up: >
+    {{ 
+      cluster_id == 8 and 
+      (command_id == 2 or command_id == 5) and 
+      (args.stepMode | default(args[0]) | int == 0)
+    }}
+    
+  is_scroll_down: >
+    {{ 
+      cluster_id == 8 and 
+      (command_id == 2 or command_id == 5) and 
+      (args.stepMode | default(args[0]) | int == 1)
+    }}
 
 action:
   - choose:
-      # ------------------------------------------------------
-      # GROUP 1 LOGIC
-      # ------------------------------------------------------
+      # --- GROUP 1 ACTIONS ---
       - conditions:
           - "{{ current_group == 'Group 1' }}"
         sequence:
           - choose:
-              - conditions: "{{ is_press }}"
-                sequence: !input action_press_g1
+              - conditions: "{{ is_click }}"
+                sequence: !input action_click_g1
               - conditions: "{{ is_scroll_up }}"
                 sequence: !input action_scroll_up_g1
               - conditions: "{{ is_scroll_down }}"
                 sequence: !input action_scroll_down_g1
 
-      # ------------------------------------------------------
-      # GROUP 2 LOGIC
-      # ------------------------------------------------------
+      # --- GROUP 2 ACTIONS ---
       - conditions:
           - "{{ current_group == 'Group 2' }}"
         sequence:
           - choose:
-              - conditions: "{{ is_press }}"
-                sequence: !input action_press_g2
+              - conditions: "{{ is_click }}"
+                sequence: !input action_click_g2
               - conditions: "{{ is_scroll_up }}"
                 sequence: !input action_scroll_up_g2
               - conditions: "{{ is_scroll_down }}"
                 sequence: !input action_scroll_down_g2
 
-      # ------------------------------------------------------
-      # GROUP 3 LOGIC
-      # ------------------------------------------------------
+      # --- GROUP 3 ACTIONS ---
       - conditions:
           - "{{ current_group == 'Group 3' }}"
         sequence:
           - choose:
-              - conditions: "{{ is_press }}"
-                sequence: !input action_press_g3
+              - conditions: "{{ is_click }}"
+                sequence: !input action_click_g3
               - conditions: "{{ is_scroll_up }}"
                 sequence: !input action_scroll_up_g3
               - conditions: "{{ is_scroll_down }}"
