@@ -1,84 +1,104 @@
 blueprint:
-  name: IKEA BILRESA Matter Scroll Wheel (Fixed)
+  name: IKEA BILRESA Matter (9-Button Mode)
   description: >
-    Control actions with an IKEA BILRESA Matter Scroll Wheel.
+    "Corrects the logic for the IKEA BILRESA / SOMRIG style devices that expose 9 button entities.
+    
+    **How it works:**
+    The device converts scroll actions into 'Virtual Button' presses.
+    - **Group 1:** Btn 1 (Click), Btn 2 (Scroll Up), Btn 3 (Scroll Down)
+    - **Group 2:** Btn 4 (Click), Btn 5 (Scroll Up), Btn 6 (Scroll Down)
+    - **Group 3:** Btn 7 (Click), Btn 8 (Scroll Up), Btn 9 (Scroll Down)
     
     **Instructions:**
-    1. Select your IKEA Matter Device (Not the entities).
-    2. (Optional) Create a Dropdown Helper (Input Select) for "Modes" (Group 1, Group 2, etc).
-    3. Select the Actions.
-    
-    **Note on Scroll:**
-    This blueprint listens for the raw Matter 'LevelControl' events (Cluster 8) for the smoothest possible scrolling, bypassing the laggy 'multi_press' entities.
+    1. Select the Matter Device.
+    2. Map the actions below.
+    3. Use the 'Smooth Dimmer' script for the scroll actions for best results."
   domain: automation
   input:
     matter_device_id:
       name: Matter Device
-      description: "Select the IKEA BILRESA device itself (do not select the entities)."
+      description: Select the IKEA device (Not the entities, the device itself).
       selector:
         device:
           integration: matter
           multiple: false
 
-    group_helper:
-      name: Group Helper (Optional)
-      description: "An Input Select entity to track modes. (Leave empty for single mode)."
-      default: {}
-      selector:
-        entity:
-          domain: input_select
-          multiple: false
-
     # --- GROUP 1 ---
     g1_label:
-      name: "--- GROUP 1 SETTINGS ---"
-      description: "Active if Helper is empty or set to 'Group 1'."
+      name: "--- GROUP 1 (Default) ---"
+      description: "Mappings for Endpoints 1, 2, 3"
       default: {}
       selector:
         label: {}
 
-    action_click_g1:
-      name: Single Click (Group 1)
+    action_g1_click:
+      name: Click (Button 1)
       default: []
       selector:
         action: {}
 
-    action_scroll_up_g1:
-      name: Scroll Up / Right (Group 1)
-      description: "Clockwise rotation."
+    action_g1_scroll_up:
+      name: Scroll Up / Right (Button 2)
+      description: "Triggered when you rotate right in Group 1."
       default: []
       selector:
         action: {}
 
-    action_scroll_down_g1:
-      name: Scroll Down / Left (Group 1)
-      description: "Counter-clockwise rotation."
+    action_g1_scroll_down:
+      name: Scroll Down / Left (Button 3)
+      description: "Triggered when you rotate left in Group 1."
       default: []
       selector:
         action: {}
 
     # --- GROUP 2 ---
     g2_label:
-      name: "--- GROUP 2 SETTINGS ---"
-      description: "Active if Helper is set to 'Group 2'."
+      name: "--- GROUP 2 (One Dot) ---"
+      description: "Mappings for Endpoints 4, 5, 6"
       default: {}
       selector:
         label: {}
 
-    action_click_g2:
-      name: Single Click (Group 2)
+    action_g2_click:
+      name: Click (Button 4)
       default: []
       selector:
         action: {}
 
-    action_scroll_up_g2:
-      name: Scroll Up / Right (Group 2)
+    action_g2_scroll_up:
+      name: Scroll Up / Right (Button 5)
       default: []
       selector:
         action: {}
 
-    action_scroll_down_g2:
-      name: Scroll Down / Left (Group 2)
+    action_g2_scroll_down:
+      name: Scroll Down / Left (Button 6)
+      default: []
+      selector:
+        action: {}
+
+    # --- GROUP 3 ---
+    g3_label:
+      name: "--- GROUP 3 (Two Dots) ---"
+      description: "Mappings for Endpoints 7, 8, 9"
+      default: {}
+      selector:
+        label: {}
+
+    action_g3_click:
+      name: Click (Button 7)
+      default: []
+      selector:
+        action: {}
+
+    action_g3_scroll_up:
+      name: Scroll Up / Right (Button 8)
+      default: []
+      selector:
+        action: {}
+
+    action_g3_scroll_down:
+      name: Scroll Down / Left (Button 9)
       default: []
       selector:
         action: {}
@@ -93,68 +113,38 @@ trigger:
       device_id: !input matter_device_id
 
 variables:
-  # Inputs
-  helper_entity: !input group_helper
+  # Extract the Endpoint ID (1-9) which tells us which 'Virtual Button' was pressed
+  endpoint_id: "{{ trigger.event.data.endpoint_id | int }}"
   
-  # Event Parsing
+  # We accept Cluster 6 (OnOff/Toggle) OR Cluster 59 (GenericSwitch/MultiPress)
+  # because the device might use either depending on the firmware version for these virtual buttons.
   cluster_id: "{{ trigger.event.data.cluster_id }}"
-  command_id: "{{ trigger.event.data.command_id }}"
-  args: "{{ trigger.event.data.args }}"
   
-  # Group Logic
-  current_group: >
-    {% if helper_entity == {} %}
-      Group 1
-    {% else %}
-      {{ states(helper_entity) }}
-    {% endif %}
-
-  # --- LOGIC ---
-  # Click: Cluster 59 (GenericSwitch). Command 6 (MultiPressComplete) or 2 (ShortRelease)
-  # Arg: totalNumberOfPressesCounted = 1
-  is_click: >
-    {{ 
-      cluster_id == 59 and 
-      (command_id == 6 or command_id == 2) and
-      (args.totalNumberOfPressesCounted | default(1) == 1)
-    }}
-
-  # Scroll Up: Cluster 8 (LevelControl). Command 2 (Step). stepMode = 0 (Up).
-  is_scroll_up: >
-    {{ 
-      cluster_id == 8 and 
-      command_id == 2 and 
-      (args.stepMode | default(99) == 0) 
-    }}
-
-  # Scroll Down: Cluster 8 (LevelControl). Command 2 (Step). stepMode = 1 (Down).
-  is_scroll_down: >
-    {{ 
-      cluster_id == 8 and 
-      command_id == 2 and 
-      (args.stepMode | default(99) == 1) 
-    }}
+  # Valid trigger check: Must be one of the known clusters
+  is_valid_event: "{{ cluster_id in [6, 59] }}"
 
 action:
   - choose:
-      # GROUP 1
-      - conditions: "{{ current_group == 'Group 1' }}"
-        sequence:
-          - choose:
-              - conditions: "{{ is_click }}"
-                sequence: !input action_click_g1
-              - conditions: "{{ is_scroll_up }}"
-                sequence: !input action_scroll_up_g1
-              - conditions: "{{ is_scroll_down }}"
-                sequence: !input action_scroll_down_g1
-                
-      # GROUP 2
-      - conditions: "{{ current_group == 'Group 2' }}"
-        sequence:
-          - choose:
-              - conditions: "{{ is_click }}"
-                sequence: !input action_click_g2
-              - conditions: "{{ is_scroll_up }}"
-                sequence: !input action_scroll_up_g2
-              - conditions: "{{ is_scroll_down }}"
-                sequence: !input action_scroll_down_g2
+      # --- GROUP 1 ---
+      - conditions: "{{ endpoint_id == 1 and is_valid_event }}"
+        sequence: !input action_g1_click
+      - conditions: "{{ endpoint_id == 2 and is_valid_event }}"
+        sequence: !input action_g1_scroll_up
+      - conditions: "{{ endpoint_id == 3 and is_valid_event }}"
+        sequence: !input action_g1_scroll_down
+
+      # --- GROUP 2 ---
+      - conditions: "{{ endpoint_id == 4 and is_valid_event }}"
+        sequence: !input action_g2_click
+      - conditions: "{{ endpoint_id == 5 and is_valid_event }}"
+        sequence: !input action_g2_scroll_up
+      - conditions: "{{ endpoint_id == 6 and is_valid_event }}"
+        sequence: !input action_g2_scroll_down
+
+      # --- GROUP 3 ---
+      - conditions: "{{ endpoint_id == 7 and is_valid_event }}"
+        sequence: !input action_g3_click
+      - conditions: "{{ endpoint_id == 8 and is_valid_event }}"
+        sequence: !input action_g3_scroll_up
+      - conditions: "{{ endpoint_id == 9 and is_valid_event }}"
+        sequence: !input action_g3_scroll_down
