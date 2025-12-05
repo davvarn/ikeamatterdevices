@@ -1,185 +1,202 @@
 blueprint:
-  name: IKEA Bilresa Scroll Wheel Remote (Enhanced)
-  description: >
-    Fully enhanced blueprint for the IKEA Bilresa scroll‑wheel remote (fjarr_med_skroll).
-    Includes:
-      ✓ Dynamic scroll notch count (multi_press_N)
-      ✓ Group-based control (3 groups)
-      ✓ Matter, ZHA, and Zigbee2MQTT support
-      ✓ Smooth dimming engine
-      ✓ Button/scroll automation mapping
-    Works with Matter (matter_event), ZHA (zha_event), and Zigbee2MQTT (mqtt payloads).
+  name: IKEA Bilresa Scroll Wheel Remote
+  description: Control lights, media, and more with the IKEA Bilresa scroll wheel remote. Supports Matter, ZHA, and Zigbee2MQTT.
   domain: automation
   input:
+    # ========================================
+    # DEVICE SELECTION
+    # ========================================
     remote_device:
-      name: Bilresa Remote Device
-      description: Select your Bilresa scroll wheel remote.
+      name: 🎛️ Remote Device
+      description: Select your Bilresa scroll wheel remote
       selector:
-        device: {}
+        device:
+          integration: matter
+          manufacturer: IKEA of Sweden
+    
+    # ========================================
+    # BUTTON ACTIONS
+    # ========================================
     single_press_action:
-      name: Single Press
+      name: "⭕ Single Press"
+      description: Action when button is pressed once
       default: []
       selector:
         action: {}
+    
     double_press_action:
-      name: Double Press
+      name: "⭕⭕ Double Press"
+      description: Action when button is pressed twice quickly
       default: []
       selector:
         action: {}
+    
     long_press_action:
-      name: Long Press
+      name: "⭕ Long Press"
+      description: Action when button is held down
       default: []
       selector:
         action: {}
+    
+    # ========================================
+    # SCROLL WHEEL - BASIC MODE
+    # ========================================
     scroll_up_action:
-      name: Scroll Up (simple)
+      name: "🔼 Scroll Up"
+      description: Action when scrolling up/right
       default: []
       selector:
         action: {}
+    
     scroll_down_action:
-      name: Scroll Down (simple)
+      name: "🔽 Scroll Down"
+      description: Action when scrolling down/left
       default: []
       selector:
         action: {}
+    
+    # ========================================
+    # SCROLL WHEEL - SMOOTH DIMMING
+    # ========================================
     smooth_dimming_entity:
-      name: Light for Smooth Dimming
-      description: Light that smooth‑scroll dimming should control.
-      default: ''
+      name: "💡 Smooth Dimming Light"
+      description: "Light to control with smooth dimming (leave empty to disable)"
+      default: ""
       selector:
         entity:
           domain: light
+    
     smooth_step_size:
-      name: Smooth Dimming Step Size (%)
+      name: "📊 Dimming Step Size"
+      description: "How much to change brightness per scroll notch (percentage)"
       default: 4
       selector:
         number:
           min: 1
           max: 20
+          step: 1
+          unit_of_measurement: "%"
           mode: slider
+    
+    # ========================================
+    # GROUP 1 - SCROLL ACTIONS
+    # ========================================
     group1_action:
-      name: Group 1 Scroll Action
+      name: "🔵 Group 1 - Scroll Action"
+      description: "Action when scrolling while Group 1 is active"
       default: []
       selector:
         action: {}
+    
+    # ========================================
+    # GROUP 2 - SCROLL ACTIONS
+    # ========================================
     group2_action:
-      name: Group 2 Scroll Action
+      name: "🟢 Group 2 - Scroll Action"
+      description: "Action when scrolling while Group 2 is active"
       default: []
       selector:
         action: {}
+    
+    # ========================================
+    # GROUP 3 - SCROLL ACTIONS
+    # ========================================
     group3_action:
-      name: Group 3 Scroll Action
+      name: "🟡 Group 3 - Scroll Action"
+      description: "Action when scrolling while Group 3 is active"
       default: []
       selector:
         action: {}
 
-# ----------------------------
-# Triggers
-# ----------------------------
-# We listen for Matter, ZHA, and Zigbee2MQTT events.
-# Blueprint will automatically process whichever event source fires.
-# ----------------------------
+# ========================================
+# TRIGGERS
+# ========================================
 trigger:
-  # Matter events
   - platform: event
     event_type: matter_event
-    id: matter_raw
-
-  # ZHA events
+    event_data:
+      device_id: !input remote_device
+  
   - platform: event
     event_type: zha_event
-    id: zha_raw
-
-  # Zigbee2MQTT (MQTT message with action)
+    event_data:
+      device_id: !input remote_device
+  
   - platform: mqtt
-    topic: zigbee2mqtt/*/action
-    id: z2m_raw
+    topic: zigbee2mqtt/+/action
 
-# ----------------------------
-# Variables
-# ----------------------------
+# ========================================
+# VARIABLES
+# ========================================
 variables:
-  remote_id: !input remote_device
   smooth_light: !input smooth_dimming_entity
   smooth_step: !input smooth_step_size
-
-  event_payload: "{{ trigger }}"
-
-  # Normalize action names from any integration
-  normalized_action: >
-    {% if trigger.platform == 'event' and trigger.event.data.action is defined %}
-      {{ trigger.event.data.action }}
-    {% elif trigger.platform == 'mqtt' %}
+  
+  # Get the action from the event
+  action: >
+    {% if trigger.event.data.type is defined %}
+      {{ trigger.event.data.type }}
+    {% elif trigger.event.data.command is defined %}
+      {{ trigger.event.data.command }}
+    {% elif trigger.payload_json.action is defined %}
+      {{ trigger.payload_json.action }}
+    {% elif trigger.payload is defined %}
       {{ trigger.payload }}
     {% else %}
       unknown
     {% endif %}
-
-  notch_count: >
-    {% if 'multi_press_' in normalized_action %}
-      {{ normalized_action.split('multi_press_')[1] | int }}
+  
+  # Get parameters like step count or rotation amount
+  param: >
+    {% if trigger.event.data.value is defined %}
+      {{ trigger.event.data.value | int(0) }}
+    {% elif trigger.event.data.params is defined and trigger.event.data.params.step_count is defined %}
+      {{ trigger.event.data.params.step_count | int(0) }}
     {% else %}
       1
     {% endif %}
 
-  # Group selection placeholder (Matter/ZHA variants differ)
-  selected_group: >
-    {% if trigger.platform == 'event' and trigger.event.data.group is defined %}
-      {{ trigger.event.data.group }}
-    {% else %}
-      none
-    {% endif %}
-
-# ----------------------------
-# Actions
-# ----------------------------
+# ========================================
+# ACTIONS
+# ========================================
 mode: restart
 max_exceeded: silent
 
 action:
   - choose:
-
-      # ----------------------------
-      # BASIC BUTTON ACTIONS
-      # ----------------------------
-      - conditions: "{{ normalized_action == 'single_press' }}"
+      # Button: Single Press
+      - conditions: >
+          {{ action in ['Press', 'single_press', 'press', 'InitialPress'] }}
         sequence: !input single_press_action
-
-      - conditions: "{{ normalized_action == 'double_press' }}"
+      
+      # Button: Double Press
+      - conditions: >
+          {{ action in ['MultiPressComplete', 'double_press', 'multi_press_2'] and param == 2 }}
         sequence: !input double_press_action
-
-      - conditions: "{{ normalized_action == 'long_press' }}"
+      
+      # Button: Long Press
+      - conditions: >
+          {{ action in ['LongPress', 'long_press', 'hold', 'LongRelease'] }}
         sequence: !input long_press_action
-
-      # ----------------------------
-      # SIMPLE SCROLL UP / DOWN
-      # ----------------------------
-      - conditions: "{{ normalized_action in ['multi_press_1','scroll_up','rotate_right'] }}"
+      
+      # Scroll: Up/Right
+      - conditions: >
+          {{ action in ['SwitchLatched', 'rotate_right', 'scroll_up'] and param > 0 }}
         sequence: !input scroll_up_action
-
-      - conditions: "{{ normalized_action in ['multi_press_2','scroll_down','rotate_left'] }}"
+      
+      # Scroll: Down/Left  
+      - conditions: >
+          {{ action in ['SwitchLatched', 'rotate_left', 'scroll_down'] and param < 0 }}
         sequence: !input scroll_down_action
-
-      # ----------------------------
-      # SMOOTH DIMMING MODE (multi_press_N)
-      # ----------------------------
-      - conditions: "{{ 'multi_press_' in normalized_action }}"
+      
+      # Smooth Dimming (if light is configured)
+      - conditions: >
+          {{ smooth_light != '' and action == 'SwitchLatched' }}
         sequence:
           - service: light.turn_on
             target:
               entity_id: "{{ smooth_light }}"
             data:
-              brightness_step_pct: "{{ notch_count * smooth_step }}"
-
-      # ----------------------------
-      # GROUP‑BASED SCROLLING
-      # ----------------------------
-      - conditions: "{{ selected_group == '1' }}"
-        sequence: !input group1_action
-
-      - conditions: "{{ selected_group == '2' }}"
-        sequence: !input group2_action
-
-      - conditions: "{{ selected_group == '3' }}"
-        sequence: !input group3_action
-
+              brightness_step_pct: "{{ param * smooth_step }}"
+    
     default: []
