@@ -1,6 +1,11 @@
 blueprint:
   name: IKEA Bilresa Scroll Wheel Remote
-  description: Control lights, media, and more with the IKEA Bilresa scroll wheel remote. Supports Matter, ZHA, and Zigbee2MQTT.
+  description: |
+    Control multiple lights with modes using the IKEA Bilresa scroll wheel remote.
+    - Single press: Toggle light on/off
+    - Double press: Switch between brightness and temperature modes
+    - Long press: Switch to next group/light
+    - Scroll wheel: Adjust brightness or temperature based on current mode
   domain: automation
   input:
     # ========================================
@@ -10,103 +15,98 @@ blueprint:
       name: 🎛️ Remote Device
       description: Select your Bilresa scroll wheel remote
       selector:
-        device:
-          integration: matter
-          manufacturer: IKEA of Sweden
+        device: {}
     
     # ========================================
-    # BUTTON ACTIONS
+    # GROUP 1 - LIGHT CONTROL
     # ========================================
-    single_press_action:
-      name: "⭕ Single Press"
-      description: Action when button is pressed once
-      default: []
-      selector:
-        action: {}
-    
-    double_press_action:
-      name: "⭕⭕ Double Press"
-      description: Action when button is pressed twice quickly
-      default: []
-      selector:
-        action: {}
-    
-    long_press_action:
-      name: "⭕ Long Press"
-      description: Action when button is held down
-      default: []
-      selector:
-        action: {}
-    
-    # ========================================
-    # SCROLL WHEEL - BASIC MODE
-    # ========================================
-    scroll_up_action:
-      name: "🔼 Scroll Up"
-      description: Action when scrolling up/right
-      default: []
-      selector:
-        action: {}
-    
-    scroll_down_action:
-      name: "🔽 Scroll Down"
-      description: Action when scrolling down/left
-      default: []
-      selector:
-        action: {}
-    
-    # ========================================
-    # SCROLL WHEEL - SMOOTH DIMMING
-    # ========================================
-    smooth_dimming_entity:
-      name: "💡 Smooth Dimming Light"
-      description: "Light to control with smooth dimming (leave empty to disable)"
+    group1_light:
+      name: "💡 Group 1 - Light"
+      description: "First light to control"
       default: ""
       selector:
         entity:
           domain: light
     
-    smooth_step_size:
-      name: "📊 Dimming Step Size"
-      description: "How much to change brightness per scroll notch (percentage)"
-      default: 4
+    group1_mode_helper:
+      name: "🔄 Group 1 - Mode Helper"
+      description: "Input boolean to track mode (brightness vs temperature). Create one via Settings > Devices > Helpers"
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+    
+    # ========================================
+    # GROUP 2 - LIGHT CONTROL
+    # ========================================
+    group2_light:
+      name: "💡 Group 2 - Light"
+      description: "Second light to control"
+      default: ""
+      selector:
+        entity:
+          domain: light
+    
+    group2_mode_helper:
+      name: "🔄 Group 2 - Mode Helper"
+      description: "Input boolean to track mode (brightness vs temperature)"
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+    
+    # ========================================
+    # GROUP 3 - LIGHT CONTROL
+    # ========================================
+    group3_light:
+      name: "💡 Group 3 - Light"
+      description: "Third light to control"
+      default: ""
+      selector:
+        entity:
+          domain: light
+    
+    group3_mode_helper:
+      name: "🔄 Group 3 - Mode Helper"
+      description: "Input boolean to track mode (brightness vs temperature)"
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+    
+    # ========================================
+    # SETTINGS
+    # ========================================
+    active_group_helper:
+      name: "🎯 Active Group Helper"
+      description: "Input select to track which group (1, 2, or 3) is active. Create with options: '1', '2', '3'"
+      selector:
+        entity:
+          domain: input_select
+    
+    brightness_step:
+      name: "📊 Brightness Step"
+      description: "How much to change brightness per scroll notch"
+      default: 10
       selector:
         number:
           min: 1
-          max: 20
+          max: 50
           step: 1
           unit_of_measurement: "%"
           mode: slider
     
-    # ========================================
-    # GROUP 1 - SCROLL ACTIONS
-    # ========================================
-    group1_action:
-      name: "🔵 Group 1 - Scroll Action"
-      description: "Action when scrolling while Group 1 is active"
-      default: []
+    temperature_step:
+      name: "🌡️ Temperature Step"
+      description: "How much to change color temperature per scroll notch (mireds)"
+      default: 20
       selector:
-        action: {}
-    
-    # ========================================
-    # GROUP 2 - SCROLL ACTIONS
-    # ========================================
-    group2_action:
-      name: "🟢 Group 2 - Scroll Action"
-      description: "Action when scrolling while Group 2 is active"
-      default: []
-      selector:
-        action: {}
-    
-    # ========================================
-    # GROUP 3 - SCROLL ACTIONS
-    # ========================================
-    group3_action:
-      name: "🟡 Group 3 - Scroll Action"
-      description: "Action when scrolling while Group 3 is active"
-      default: []
-      selector:
-        action: {}
+        number:
+          min: 5
+          max: 100
+          step: 5
+          unit_of_measurement: "mireds"
+          mode: slider
 
 # ========================================
 # TRIGGERS
@@ -129,29 +129,68 @@ trigger:
 # VARIABLES
 # ========================================
 variables:
-  smooth_light: !input smooth_dimming_entity
-  smooth_step: !input smooth_step_size
+  active_group: !input active_group_helper
+  brightness_step_size: !input brightness_step
+  temp_step_size: !input temperature_step
   
-  # Get the action from the event
-  action: >
-    {% if trigger.event.data.type is defined %}
-      {{ trigger.event.data.type }}
-    {% elif trigger.event.data.command is defined %}
-      {{ trigger.event.data.command }}
-    {% elif trigger.payload_json.action is defined %}
-      {{ trigger.payload_json.action }}
-    {% elif trigger.payload is defined %}
-      {{ trigger.payload }}
+  group1_light: !input group1_light
+  group2_light: !input group2_light
+  group3_light: !input group3_light
+  
+  group1_mode: !input group1_mode_helper
+  group2_mode: !input group2_mode_helper
+  group3_mode: !input group3_mode_helper
+  
+  # Get current group (1, 2, or 3)
+  current_group: "{{ states(active_group) }}"
+  
+  # Get light for current group
+  current_light: >
+    {% if states(active_group) == '1' %}
+      {{ group1_light }}
+    {% elif states(active_group) == '2' %}
+      {{ group2_light }}
+    {% elif states(active_group) == '3' %}
+      {{ group3_light }}
     {% else %}
-      unknown
+      none
     {% endif %}
   
-  # Get parameters like step count or rotation amount
-  param: >
-    {% if trigger.event.data.value is defined %}
-      {{ trigger.event.data.value | int(0) }}
-    {% elif trigger.event.data.params is defined and trigger.event.data.params.step_count is defined %}
-      {{ trigger.event.data.params.step_count | int(0) }}
+  # Get mode helper for current group
+  current_mode_helper: >
+    {% if states(active_group) == '1' %}
+      {{ group1_mode }}
+    {% elif states(active_group) == '2' %}
+      {{ group2_mode }}
+    {% elif states(active_group) == '3' %}
+      {{ group3_mode }}
+    {% else %}
+      none
+    {% endif %}
+  
+  # Check if we're in temperature mode (on) or brightness mode (off)
+  is_temperature_mode: "{{ is_state(current_mode_helper, 'on') }}"
+  
+  # Get the event type from Matter/ZHA events
+  event_type: >
+    {% if trigger.event is defined and trigger.event.data.type is defined %}
+      {{ trigger.event.data.type }}
+    {% elif trigger.event is defined and trigger.event.data.command is defined %}
+      {{ trigger.event.data.command }}
+    {% else %}
+      none
+    {% endif %}
+  
+  # Get scroll direction/amount
+  scroll_value: >
+    {% if trigger.event is defined and trigger.event.data.params is defined %}
+      {% if trigger.event.data.params.new_position is defined %}
+        {{ trigger.event.data.params.new_position | int(1) }}
+      {% elif trigger.event.data.params.step_count is defined %}
+        {{ trigger.event.data.params.step_count | int(1) }}
+      {% else %}
+        1
+      {% endif %}
     {% else %}
       1
     {% endif %}
@@ -164,39 +203,81 @@ max_exceeded: silent
 
 action:
   - choose:
-      # Button: Single Press
-      - conditions: >
-          {{ action in ['Press', 'single_press', 'press', 'InitialPress'] }}
-        sequence: !input single_press_action
-      
-      # Button: Double Press
-      - conditions: >
-          {{ action in ['MultiPressComplete', 'double_press', 'multi_press_2'] and param == 2 }}
-        sequence: !input double_press_action
-      
-      # Button: Long Press
-      - conditions: >
-          {{ action in ['LongPress', 'long_press', 'hold', 'LongRelease'] }}
-        sequence: !input long_press_action
-      
-      # Scroll: Up/Right
-      - conditions: >
-          {{ action in ['SwitchLatched', 'rotate_right', 'scroll_up'] and param > 0 }}
-        sequence: !input scroll_up_action
-      
-      # Scroll: Down/Left  
-      - conditions: >
-          {{ action in ['SwitchLatched', 'rotate_left', 'scroll_down'] and param < 0 }}
-        sequence: !input scroll_down_action
-      
-      # Smooth Dimming (if light is configured)
-      - conditions: >
-          {{ smooth_light != '' and action == 'SwitchLatched' }}
+      # ===== SINGLE PRESS: Toggle current light on/off =====
+      - conditions:
+          - condition: template
+            value_template: "{{ event_type in ['InitialPress', 'Press'] }}"
         sequence:
-          - service: light.turn_on
+          - service: light.toggle
             target:
-              entity_id: "{{ smooth_light }}"
+              entity_id: "{{ current_light }}"
+      
+      # ===== DOUBLE PRESS: Toggle between brightness and temperature modes =====
+      - conditions:
+          - condition: template
+            value_template: "{{ event_type == 'MultiPressComplete' }}"
+        sequence:
+          - service: input_boolean.toggle
+            target:
+              entity_id: "{{ current_mode_helper }}"
+      
+      # ===== LONG PRESS: Switch to next group =====
+      - conditions:
+          - condition: template
+            value_template: "{{ event_type in ['LongPress', 'LongRelease'] }}"
+        sequence:
+          - service: input_select.select_next
+            target:
+              entity_id: "{{ active_group }}"
             data:
-              brightness_step_pct: "{{ param * smooth_step }}"
+              cycle: true
+      
+      # ===== SCROLL UP: Increase brightness or temperature =====
+      - conditions:
+          - condition: template
+            value_template: "{{ event_type == 'SwitchLatched' and scroll_value > 0 }}"
+        sequence:
+          - choose:
+              # Temperature mode
+              - conditions:
+                  - condition: template
+                    value_template: "{{ is_temperature_mode }}"
+                sequence:
+                  - service: light.turn_on
+                    target:
+                      entity_id: "{{ current_light }}"
+                    data:
+                      color_temp: "{{ state_attr(current_light, 'color_temp') | int + (temp_step_size * scroll_value) }}"
+            # Brightness mode (default)
+            default:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ current_light }}"
+                data:
+                  brightness_step_pct: "{{ brightness_step_size * scroll_value }}"
+      
+      # ===== SCROLL DOWN: Decrease brightness or temperature =====
+      - conditions:
+          - condition: template
+            value_template: "{{ event_type == 'SwitchLatched' and scroll_value < 0 }}"
+        sequence:
+          - choose:
+              # Temperature mode
+              - conditions:
+                  - condition: template
+                    value_template: "{{ is_temperature_mode }}"
+                sequence:
+                  - service: light.turn_on
+                    target:
+                      entity_id: "{{ current_light }}"
+                    data:
+                      color_temp: "{{ state_attr(current_light, 'color_temp') | int + (temp_step_size * scroll_value) }}"
+            # Brightness mode (default)
+            default:
+              - service: light.turn_on
+                target:
+                  entity_id: "{{ current_light }}"
+                data:
+                  brightness_step_pct: "{{ brightness_step_size * scroll_value }}"
     
     default: []
