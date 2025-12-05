@@ -1,5 +1,5 @@
 blueprint:
-  name: IKEA BILRESA Matter (9-Button Mode)
+  name: IKEA BILRESA Matter (9-Button Mode) v2
   description: >
     "Corrects the logic for the IKEA BILRESA / SOMRIG style devices that expose 9 button entities.
     
@@ -27,7 +27,6 @@ blueprint:
     g1_label:
       name: "--- GROUP 1 (Default) ---"
       description: "Mappings for Endpoints 1, 2, 3"
-      default: {}
       selector:
         label: {}
 
@@ -55,7 +54,6 @@ blueprint:
     g2_label:
       name: "--- GROUP 2 (One Dot) ---"
       description: "Mappings for Endpoints 4, 5, 6"
-      default: {}
       selector:
         label: {}
 
@@ -81,7 +79,6 @@ blueprint:
     g3_label:
       name: "--- GROUP 3 (Two Dots) ---"
       description: "Mappings for Endpoints 7, 8, 9"
-      default: {}
       selector:
         label: {}
 
@@ -116,35 +113,31 @@ variables:
   # Extract the Endpoint ID (1-9) which tells us which 'Virtual Button' was pressed
   endpoint_id: "{{ trigger.event.data.endpoint_id | int }}"
   
-  # We accept Cluster 6 (OnOff/Toggle) OR Cluster 59 (GenericSwitch/MultiPress)
-  # because the device might use either depending on the firmware version for these virtual buttons.
-  cluster_id: "{{ trigger.event.data.cluster_id }}"
+  # We removed the strict 'cluster_id' and 'command_id' checks.
+  # If the endpoint is valid (1-9), we assume it's a valid action.
   
-  # Valid trigger check: Must be one of the known clusters
-  is_valid_event: "{{ cluster_id in [6, 59] }}"
-
 action:
   - choose:
       # --- GROUP 1 ---
-      - conditions: "{{ endpoint_id == 1 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 1 }}"
         sequence: !input action_g1_click
-      - conditions: "{{ endpoint_id == 2 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 2 }}"
         sequence: !input action_g1_scroll_up
-      - conditions: "{{ endpoint_id == 3 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 3 }}"
         sequence: !input action_g1_scroll_down
 
       # --- GROUP 2 ---
-      - conditions: "{{ endpoint_id == 4 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 4 }}"
         sequence: !input action_g2_click
-      - conditions: "{{ endpoint_id == 5 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 5 }}"
         sequence: !input action_g2_scroll_up
-      - conditions: "{{ endpoint_id == 6 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 6 }}"
         sequence: !input action_g2_scroll_down
 
       # --- GROUP 3 ---
-      - conditions: "{{ endpoint_id == 7 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 7 }}"
         sequence: !input action_g3_click
-      - conditions: "{{ endpoint_id == 8 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 8 }}"
         sequence: !input action_g3_scroll_up
-      - conditions: "{{ endpoint_id == 9 and is_valid_event }}"
+      - conditions: "{{ endpoint_id == 9 }}"
         sequence: !input action_g3_scroll_down
