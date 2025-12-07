@@ -1,143 +1,114 @@
 blueprint:
-  name: IKEA BILRESA Matter (9-Button Mode) v2
+  name: IKEA Bilresa Matter 3-Group Controller
   description: >
-    "Corrects the logic for the IKEA BILRESA / SOMRIG style devices that expose 9 button entities.
-    
-    **How it works:**
-    The device converts scroll actions into 'Virtual Button' presses.
-    - **Group 1:** Btn 1 (Click), Btn 2 (Scroll Up), Btn 3 (Scroll Down)
-    - **Group 2:** Btn 4 (Click), Btn 5 (Scroll Up), Btn 6 (Scroll Down)
-    - **Group 3:** Btn 7 (Click), Btn 8 (Scroll Up), Btn 9 (Scroll Down)
-    
-    **Instructions:**
-    1. Select the Matter Device.
-    2. Map the actions below.
-    3. Use the 'Smooth Dimmer' script for the scroll actions for best results."
+    Control 3 separate light groups using the IKEA Bilresa scroll wheel via Matter.
+    Each group has dedicated Brighten, Dim, and Toggle/Temp-cycle actions.
   domain: automation
   input:
-    matter_device_id:
-      name: Matter Device
-      description: Select the IKEA device (Not the entities, the device itself).
-      selector:
-        device:
-          integration: matter
-          multiple: false
+    remote_entity_1:
+      name: Remote Button Entity 1 (Up Group 1)
+      selector: { entity: { domain: event } }
+    remote_entity_2:
+      name: Remote Button Entity 2 (Down Group 1)
+      selector: { entity: { domain: event } }
+    remote_entity_3:
+      name: Remote Button Entity 3 (Toggle Group 1)
+      selector: { entity: { domain: event } }
+    light_group_1:
+      name: Light Entity Group 1
+      selector: { target: { entity: { domain: light } } }
+    
+    remote_entity_4:
+      name: Remote Button Entity 4 (Up Group 2)
+      selector: { entity: { domain: event } }
+    remote_entity_5:
+      name: Remote Button Entity 5 (Down Group 2)
+      selector: { entity: { domain: event } }
+    remote_entity_6:
+      name: Remote Button Entity 6 (Toggle Group 2)
+      selector: { entity: { domain: event } }
+    light_group_2:
+      name: Light Entity Group 2
+      selector: { target: { entity: { domain: light } } }
 
-    # --- GROUP 1 ---
-    g1_label:
-      name: "--- GROUP 1 (Default) ---"
-      description: "Mappings for Endpoints 1, 2, 3"
-      selector:
-        label: {}
+    remote_entity_7:
+      name: Remote Button Entity 7 (Up Group 3)
+      selector: { entity: { domain: event } }
+    remote_entity_8:
+      name: Remote Button Entity 8 (Down Group 3)
+      selector: { entity: { domain: event } }
+    remote_entity_9:
+      name: Remote Button Entity 9 (Toggle Group 3)
+      selector: { entity: { domain: event } }
+    light_group_3:
+      name: Light Entity Group 3
+      selector: { target: { entity: { domain: light } } }
 
-    action_g1_click:
-      name: Click (Button 1)
-      default: []
-      selector:
-        action: {}
-
-    action_g1_scroll_up:
-      name: Scroll Up / Right (Button 2)
-      description: "Triggered when you rotate right in Group 1."
-      default: []
-      selector:
-        action: {}
-
-    action_g1_scroll_down:
-      name: Scroll Down / Left (Button 3)
-      description: "Triggered when you rotate left in Group 1."
-      default: []
-      selector:
-        action: {}
-
-    # --- GROUP 2 ---
-    g2_label:
-      name: "--- GROUP 2 (One Dot) ---"
-      description: "Mappings for Endpoints 4, 5, 6"
-      selector:
-        label: {}
-
-    action_g2_click:
-      name: Click (Button 4)
-      default: []
-      selector:
-        action: {}
-
-    action_g2_scroll_up:
-      name: Scroll Up / Right (Button 5)
-      default: []
-      selector:
-        action: {}
-
-    action_g2_scroll_down:
-      name: Scroll Down / Left (Button 6)
-      default: []
-      selector:
-        action: {}
-
-    # --- GROUP 3 ---
-    g3_label:
-      name: "--- GROUP 3 (Two Dots) ---"
-      description: "Mappings for Endpoints 7, 8, 9"
-      selector:
-        label: {}
-
-    action_g3_click:
-      name: Click (Button 7)
-      default: []
-      selector:
-        action: {}
-
-    action_g3_scroll_up:
-      name: Scroll Up / Right (Button 8)
-      default: []
-      selector:
-        action: {}
-
-    action_g3_scroll_down:
-      name: Scroll Down / Left (Button 9)
-      default: []
-      selector:
-        action: {}
-
-mode: queued
-max: 10
+mode: restart
+max_exceeded: silent
 
 trigger:
-  - platform: event
-    event_type: matter_event
-    event_data:
-      device_id: !input matter_device_id
+  - platform: state
+    entity_id: 
+      - !input remote_entity_1
+      - !input remote_entity_2
+      - !input remote_entity_3
+      - !input remote_entity_4
+      - !input remote_entity_5
+      - !input remote_entity_6
+      - !input remote_entity_7
+      - !input remote_entity_8
+      - !input remote_entity_9
 
-variables:
-  # Extract the Endpoint ID (1-9) which tells us which 'Virtual Button' was pressed
-  endpoint_id: "{{ trigger.event.data.endpoint_id | int }}"
-  
-  # We removed the strict 'cluster_id' and 'command_id' checks.
-  # If the endpoint is valid (1-9), we assume it's a valid action.
-  
 action:
+  - variables:
+      # Map entities into logic variables
+      id: "{{ trigger.entity_id }}"
+      target_light: >
+        {% if id in [ (states[ ( !input remote_entity_1 ) ].entity_id), (states[ ( !input remote_entity_2 ) ].entity_id), (states[ ( !input remote_entity_3 ) ].entity_id) ] %} !input light_group_1
+        {% elif id in [ (states[ ( !input remote_entity_4 ) ].entity_id), (states[ ( !input remote_entity_5 ) ].entity_id), (states[ ( !input remote_entity_6 ) ].entity_id) ] %} !input light_group_2
+        {% else %} !input light_group_3 {% endif %}
+      
+      command: >
+        {% if id in [ (states[ ( !input remote_entity_1 ) ].entity_id), (states[ ( !input remote_entity_4 ) ].entity_id), (states[ ( !input remote_entity_7 ) ].entity_id) ] %} up
+        {% elif id in [ (states[ ( !input remote_entity_2 ) ].entity_id), (states[ ( !input remote_entity_5 ) ].entity_id), (states[ ( !input remote_entity_8 ) ].entity_id) ] %} down
+        {% else %} toggle {% endif %}
+
+      is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
+
   - choose:
-      # --- GROUP 1 ---
-      - conditions: "{{ endpoint_id == 1 }}"
-        sequence: !input action_g1_click
-      - conditions: "{{ endpoint_id == 2 }}"
-        sequence: !input action_g1_scroll_up
-      - conditions: "{{ endpoint_id == 3 }}"
-        sequence: !input action_g1_scroll_down
+      # Logic A: Temp Cycle (Long press toggle)
+      - conditions: "{{ is_long and command == 'toggle' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_group_1 # Simplified for logic scope
+            data:
+              color_temp_kelvin: >
+                {% set current = state_attr( (target_light|first), 'color_temp_kelvin') | int(2700) %}
+                {% if current < 3000 %} 4000
+                {% elif current < 4500 %} 6000
+                {% else %} 2700 {% endif %}
 
-      # --- GROUP 2 ---
-      - conditions: "{{ endpoint_id == 4 }}"
-        sequence: !input action_g2_click
-      - conditions: "{{ endpoint_id == 5 }}"
-        sequence: !input action_g2_scroll_up
-      - conditions: "{{ endpoint_id == 6 }}"
-        sequence: !input action_g2_scroll_down
+      # Logic B: Toggle
+      - conditions: "{{ command == 'toggle' and not is_long }}"
+        sequence:
+          - service: light.toggle
+            target: "{{ target_light }}"
 
-      # --- GROUP 3 ---
-      - conditions: "{{ endpoint_id == 7 }}"
-        sequence: !input action_g3_click
-      - conditions: "{{ endpoint_id == 8 }}"
-        sequence: !input action_g3_scroll_up
-      - conditions: "{{ endpoint_id == 9 }}"
-        sequence: !input action_g3_scroll_down
+      # Logic C: Dim Up
+      - conditions: "{{ command == 'up' }}"
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_light }}"
+            data:
+              brightness_step_pct: 15
+              transition: 0
+
+      # Logic D: Dim Down
+      - conditions: "{{ command == 'down' }}"
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_light }}"
+            data:
+              brightness_step_pct: -15
+              transition: 0
