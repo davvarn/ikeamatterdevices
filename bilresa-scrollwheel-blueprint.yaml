@@ -1,114 +1,78 @@
 blueprint:
-  name: IKEA Bilresa Matter 3-Group Controller
+  name: IKEA Bilresa Matter - One-Select Auto Map
   description: >
-    Control 3 separate light groups using the IKEA Bilresa scroll wheel via Matter.
-    Each group has dedicated Brighten, Dim, and Toggle/Temp-cycle actions.
+    Select the remote device and the lights. 
+    It will automatically map buttons 1-9 based on the device selection.
   domain: automation
   input:
-    remote_entity_1:
-      name: Remote Button Entity 1 (Up Group 1)
-      selector: { entity: { domain: event } }
-    remote_entity_2:
-      name: Remote Button Entity 2 (Down Group 1)
-      selector: { entity: { domain: event } }
-    remote_entity_3:
-      name: Remote Button Entity 3 (Toggle Group 1)
-      selector: { entity: { domain: event } }
+    bilresa_remote:
+      name: IKEA Bilresa Remote Device
+      selector:
+        device:
+          integration: matter
+          model: "BILRESA scroll" # Filter to help limit selection
     light_group_1:
-      name: Light Entity Group 1
+      name: Kitchen Group (Buttons 1-3)
       selector: { target: { entity: { domain: light } } }
-    
-    remote_entity_4:
-      name: Remote Button Entity 4 (Up Group 2)
-      selector: { entity: { domain: event } }
-    remote_entity_5:
-      name: Remote Button Entity 5 (Down Group 2)
-      selector: { entity: { domain: event } }
-    remote_entity_6:
-      name: Remote Button Entity 6 (Toggle Group 2)
-      selector: { entity: { domain: event } }
     light_group_2:
-      name: Light Entity Group 2
+      name: Sofa Group (Buttons 4-6)
       selector: { target: { entity: { domain: light } } }
-
-    remote_entity_7:
-      name: Remote Button Entity 7 (Up Group 3)
-      selector: { entity: { domain: event } }
-    remote_entity_8:
-      name: Remote Button Entity 8 (Down Group 3)
-      selector: { entity: { domain: event } }
-    remote_entity_9:
-      name: Remote Button Entity 9 (Toggle Group 3)
-      selector: { entity: { domain: event } }
     light_group_3:
-      name: Light Entity Group 3
+      name: All Lights Group (Buttons 7-9)
       selector: { target: { entity: { domain: light } } }
 
 mode: restart
-max_exceeded: silent
 
+# Trigger on any button activity from the selected device
 trigger:
-  - platform: state
-    entity_id: 
-      - !input remote_entity_1
-      - !input remote_entity_2
-      - !input remote_entity_3
-      - !input remote_entity_4
-      - !input remote_entity_5
-      - !input remote_entity_6
-      - !input remote_entity_7
-      - !input remote_entity_8
-      - !input remote_entity_9
+  - platform: event
+    event_type: matter_event
+    event_data:
+      device_id: !input bilresa_remote
 
 action:
   - variables:
-      # Map entities into logic variables
-      id: "{{ trigger.entity_id }}"
+      # Get the button number from the Matter event payload
+      # Assuming buttons are labeled button_1, button_2, etc.
+      btn_num: "{{ trigger.event.data.endpoint_id | int }}"
       target_light: >
-        {% if id in [ (states[ ( !input remote_entity_1 ) ].entity_id), (states[ ( !input remote_entity_2 ) ].entity_id), (states[ ( !input remote_entity_3 ) ].entity_id) ] %} !input light_group_1
-        {% elif id in [ (states[ ( !input remote_entity_4 ) ].entity_id), (states[ ( !input remote_entity_5 ) ].entity_id), (states[ ( !input remote_entity_6 ) ].entity_id) ] %} !input light_group_2
+        {% if btn_num in [1, 2, 3] %} !input light_group_1
+        {% elif btn_num in [4, 5, 6] %} !input light_group_2
         {% else %} !input light_group_3 {% endif %}
       
       command: >
-        {% if id in [ (states[ ( !input remote_entity_1 ) ].entity_id), (states[ ( !input remote_entity_4 ) ].entity_id), (states[ ( !input remote_entity_7 ) ].entity_id) ] %} up
-        {% elif id in [ (states[ ( !input remote_entity_2 ) ].entity_id), (states[ ( !input remote_entity_5 ) ].entity_id), (states[ ( !input remote_entity_8 ) ].entity_id) ] %} down
+        {% if btn_num in [1, 4, 7] %} up
+        {% elif btn_num in [2, 5, 8] %} down
         {% else %} toggle {% endif %}
 
-      is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
+      # Matter event type check
+      is_long: "{{ trigger.event.data.event_type == 'long_press' }}"
 
   - choose:
-      # Logic A: Temp Cycle (Long press toggle)
+      # Logic A: Temp Cycle
       - conditions: "{{ is_long and command == 'toggle' }}"
         sequence:
           - service: light.turn_on
-            target: !input light_group_1 # Simplified for logic scope
+            target:
+              entity_id: "{{ target_light }}"
             data:
               color_temp_kelvin: >
-                {% set current = state_attr( (target_light|first), 'color_temp_kelvin') | int(2700) %}
+                {% set current = state_attr(target_light, 'color_temp_kelvin') | int(2700) %}
                 {% if current < 3000 %} 4000
                 {% elif current < 4500 %} 6000
                 {% else %} 2700 {% endif %}
 
-      # Logic B: Toggle
-      - conditions: "{{ command == 'toggle' and not is_long }}"
+      # Logic B: Standard Actions
+      - conditions: "{{ not is_long }}"
         sequence:
-          - service: light.toggle
-            target: "{{ target_light }}"
-
-      # Logic C: Dim Up
-      - conditions: "{{ command == 'up' }}"
-        sequence:
-          - service: light.turn_on
-            target: "{{ target_light }}"
-            data:
-              brightness_step_pct: 15
-              transition: 0
-
-      # Logic D: Dim Down
-      - conditions: "{{ command == 'down' }}"
-        sequence:
-          - service: light.turn_on
-            target: "{{ target_light }}"
-            data:
-              brightness_step_pct: -15
-              transition: 0
+          - service: >
+              {% if command == 'toggle' %} light.toggle
+              {% else %} light.turn_on {% endif %}
+            target:
+              entity_id: "{{ target_light }}"
+            data: >
+              {% if command == 'up' %} 
+                {"brightness_step_pct": 15, "transition": 0}
+              {% elif command == 'down' %} 
+                {"brightness_step_pct": -15, "transition": 0}
+              {% else %} {} {% endif %}
