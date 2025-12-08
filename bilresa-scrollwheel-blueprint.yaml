@@ -240,8 +240,10 @@ actions:
   - choose:
       # Middle button long press - cycle color temperature (if enabled)
       - conditions:
+          - "{{ color_temp_enabled }}"
+          - "{{ is_long }}"
           - condition: template
-            value_template: "{{ color_temp_enabled and is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
+            value_template: "{{ trigger.id in ['btn3', 'btn6', 'btn9'] }}"
         sequence:
           - action: light.turn_on
             target:
