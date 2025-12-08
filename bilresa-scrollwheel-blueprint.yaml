@@ -4,15 +4,15 @@ blueprint:
     Control your lights with the IKEA Bilresa/Fjärr med skroll remote via Matter.
     
     **Features:**
-    - 3 independent zones (top, middle, bottom rows)
+    - 3 independent groups (9 buttons total)
     - Left/Right buttons: dim up/down (±10%)
     - Middle button: toggle on/off
     - Middle button long press: cycle color temperature (warm → neutral → cool)
     
     **Button Layout:**
-    - Buttons 1-3: Group 1 (top row)
-    - Buttons 4-6: Group 2 (middle row)  
-    - Buttons 7-9: Group 3 (bottom row)
+    - Buttons 1-3: Group 1
+    - Buttons 4-6: Group 2  
+    - Buttons 7-9: Group 3
     
   domain: automation
   
@@ -99,8 +99,8 @@ blueprint:
           multiple: false
     
     zone1_light:
-      name: Group 1 Light (Top Row - Buttons 1-3)
-      description: Light(s) controlled by the top row of buttons
+      name: Group 1 Light (Buttons 1-3)
+      description: Light(s) controlled by buttons 1-3
       selector:
         entity:
           filter:
@@ -108,8 +108,8 @@ blueprint:
           multiple: false
     
     zone2_light:
-      name: Group 2 Light (Middle Row - Buttons 4-6)
-      description: Light(s) controlled by the middle row of buttons
+      name: Group 2 Light (Buttons 4-6)
+      description: Light(s) controlled by buttons 4-6
       selector:
         entity:
           filter:
@@ -117,8 +117,8 @@ blueprint:
           multiple: false
     
     zone3_light:
-      name: Group 3 Light (Bottom Row - Buttons 7-9)
-      description: Light(s) controlled by the bottom row of buttons
+      name: Group 3 Light (Buttons 7-9)
+      description: Light(s) controlled by buttons 7-9
       selector:
         entity:
           filter:
