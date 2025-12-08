@@ -23,7 +23,6 @@ blueprint:
       selector:
         device:
           integration: matter
-          model: "Fjärr med skroll"
     
     group1_light:
       name: Group 1 Light (Buttons 1-3)
