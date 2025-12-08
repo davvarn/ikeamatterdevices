@@ -1,78 +1,221 @@
 blueprint:
-  name: IKEA Bilresa Matter - One-Select Auto Map
-  description: >
-    Select the remote device and the lights. 
-    It will automatically map buttons 1-9 based on the device selection.
+  name: IKEA Bilresa (Fjärr med skroll) - Smart Light Control
+  description: |
+    Control your lights with the IKEA Bilresa/Fjärr med skroll remote (Matter/Zigbee).
+    
+    **Features:**
+    - 3 independent zones (top, middle, bottom rows)
+    - Left/Right buttons: dim up/down (±10%)
+    - Middle button: toggle on/off
+    - Middle button long press: cycle color temperature (warm → neutral → cool)
+    
+    **Button Layout:**
+    - Buttons 1-3: Zone 1 (top row)
+    - Buttons 4-6: Zone 2 (middle row)  
+    - Buttons 7-9: Zone 3 (bottom row)
+    
   domain: automation
+  
   input:
-    bilresa_remote:
-      name: IKEA Bilresa Remote Device
+    remote_device:
+      name: IKEA Bilresa Remote
+      description: Select your IKEA Bilresa/Fjärr med skroll remote
       selector:
         device:
-          integration: matter
-          model: "BILRESA scroll" # Filter to help limit selection
-    light_group_1:
-      name: Kitchen Group (Buttons 1-3)
-      selector: { target: { entity: { domain: light } } }
-    light_group_2:
-      name: Sofa Group (Buttons 4-6)
-      selector: { target: { entity: { domain: light } } }
-    light_group_3:
-      name: All Lights Group (Buttons 7-9)
-      selector: { target: { entity: { domain: light } } }
+          filter:
+            - integration: matter
+              model: "Fjärr med skroll"
+          multiple: false
+    
+    zone1_light:
+      name: Zone 1 Light (Top Row - Buttons 1-3)
+      description: Light(s) controlled by the top row of buttons
+      selector:
+        entity:
+          filter:
+            - domain: light
+          multiple: false
+    
+    zone2_light:
+      name: Zone 2 Light (Middle Row - Buttons 4-6)
+      description: Light(s) controlled by the middle row of buttons
+      selector:
+        entity:
+          filter:
+            - domain: light
+          multiple: false
+    
+    zone3_light:
+      name: Zone 3 Light (Bottom Row - Buttons 7-9)
+      description: Light(s) controlled by the bottom row of buttons
+      selector:
+        entity:
+          filter:
+            - domain: light
+          multiple: false
+    
+    brightness_step:
+      name: Brightness Step
+      description: Percentage to increase/decrease brightness per button press
+      default: 10
+      selector:
+        number:
+          min: 5
+          max: 25
+          step: 5
+          unit_of_measurement: "%"
+    
+    transition_time:
+      name: Transition Time
+      description: Smooth transition duration for brightness changes
+      default: 1.0
+      selector:
+        number:
+          min: 0.0
+          max: 5.0
+          step: 0.5
+          unit_of_measurement: "s"
+    
+    temp_warm:
+      name: Warm Color Temperature
+      description: Warm white color temperature in Kelvin
+      default: 2700
+      selector:
+        number:
+          min: 2000
+          max: 3500
+          step: 100
+          unit_of_measurement: "K"
+    
+    temp_neutral:
+      name: Neutral Color Temperature
+      description: Neutral white color temperature in Kelvin
+      default: 4000
+      selector:
+        number:
+          min: 3500
+          max: 5000
+          step: 100
+          unit_of_measurement: "K"
+    
+    temp_cool:
+      name: Cool Color Temperature
+      description: Cool white color temperature in Kelvin
+      default: 6000
+      selector:
+        number:
+          min: 5000
+          max: 7000
+          step: 100
+          unit_of_measurement: "K"
 
 mode: restart
+max_exceeded: silent
 
-# Trigger on any button activity from the selected device
-trigger:
-  - platform: event
-    event_type: matter_event
-    event_data:
-      device_id: !input bilresa_remote
+triggers:
+  - trigger: state
+    entity_id: 
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_1
+    id: btn1
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_2
+    id: btn2
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_3
+    id: btn3
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_4
+    id: btn4
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_5
+    id: btn5
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_6
+    id: btn6
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_7
+    id: btn7
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_8
+    id: btn8
+  - trigger: state
+    entity_id:
+      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_9
+    id: btn9
 
-action:
+actions:
   - variables:
-      # Get the button number from the Matter event payload
-      # Assuming buttons are labeled button_1, button_2, etc.
-      btn_num: "{{ trigger.event.data.endpoint_id | int }}"
       target_light: >
-        {% if btn_num in [1, 2, 3] %} !input light_group_1
-        {% elif btn_num in [4, 5, 6] %} !input light_group_2
-        {% else %} !input light_group_3 {% endif %}
-      
-      command: >
-        {% if btn_num in [1, 4, 7] %} up
-        {% elif btn_num in [2, 5, 8] %} down
-        {% else %} toggle {% endif %}
-
-      # Matter event type check
-      is_long: "{{ trigger.event.data.event_type == 'long_press' }}"
-
+        {% if trigger.id in ['btn1', 'btn2', 'btn3'] %}
+          {{ zone1_light }}
+        {% elif trigger.id in ['btn4', 'btn5', 'btn6'] %}
+          {{ zone2_light }}
+        {% else %}
+          {{ zone3_light }}
+        {% endif %}
+      is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
+      warm_temp: !input temp_warm
+      neutral_temp: !input temp_neutral
+      cool_temp: !input temp_cool
+      step_pct: !input brightness_step
+      transition_sec: !input transition_time
+  
   - choose:
-      # Logic A: Temp Cycle
-      - conditions: "{{ is_long and command == 'toggle' }}"
+      # Middle button long press - cycle color temperature
+      - conditions:
+          - condition: template
+            value_template: "{{ is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
         sequence:
-          - service: light.turn_on
+          - action: light.turn_on
             target:
               entity_id: "{{ target_light }}"
             data:
               color_temp_kelvin: >
-                {% set current = state_attr(target_light, 'color_temp_kelvin') | int(2700) %}
-                {% if current < 3000 %} 4000
-                {% elif current < 4500 %} 6000
-                {% else %} 2700 {% endif %}
-
-      # Logic B: Standard Actions
-      - conditions: "{{ not is_long }}"
+                {% set current = state_attr(target_light, 'color_temp_kelvin') | int(warm_temp) %}
+                {% if current < neutral_temp %}
+                  {{ neutral_temp }}
+                {% elif current < cool_temp %}
+                  {{ cool_temp }}
+                {% else %}
+                  {{ warm_temp }}
+                {% endif %}
+      
+      # Middle button - toggle
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id in ['btn3', 'btn6', 'btn9'] and not is_long }}"
         sequence:
-          - service: >
-              {% if command == 'toggle' %} light.toggle
-              {% else %} light.turn_on {% endif %}
+          - action: light.toggle
             target:
               entity_id: "{{ target_light }}"
-            data: >
-              {% if command == 'up' %} 
-                {"brightness_step_pct": 15, "transition": 0}
-              {% elif command == 'down' %} 
-                {"brightness_step_pct": -15, "transition": 0}
-              {% else %} {} {% endif %}
+      
+      # Left button - brightness up
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id in ['btn1', 'btn4', 'btn7'] }}"
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: "{{ target_light }}"
+            data:
+              brightness_step_pct: "{{ step_pct }}"
+              transition: "{{ transition_sec }}"
+      
+      # Right button - brightness down
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id in ['btn2', 'btn5', 'btn8'] }}"
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: "{{ target_light }}"
+            data:
+              brightness_step_pct: "{{ -step_pct }}"
+              transition: "{{ transition_sec }}"
