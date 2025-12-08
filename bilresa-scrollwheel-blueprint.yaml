@@ -187,7 +187,8 @@ action:
           - condition: template
             value_template: "{{ is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
         sequence:
-          - target:
+          - action: light.turn_on
+            target:
               entity_id: "{{ target_light }}"
             data:
               color_temp_kelvin: >
@@ -199,31 +200,30 @@ action:
                 {% else %}
                   {{ warm_temp }}
                 {% endif %}
-            action: light.turn_on
       - conditions:
           - condition: template
             value_template: "{{ trigger.id in ['btn3', 'btn6', 'btn9'] and not is_long }}"
         sequence:
-          - target:
+          - action: light.toggle
+            target:
               entity_id: "{{ target_light }}"
-            action: light.toggle
       - conditions:
           - condition: template
             value_template: "{{ trigger.id in ['btn1', 'btn4', 'btn7'] }}"
         sequence:
-          - target:
+          - action: light.turn_on
+            target:
               entity_id: "{{ target_light }}"
             data:
               brightness_step_pct: "{{ step_pct }}"
               transition: "{{ trans_time }}"
-            action: light.turn_on
       - conditions:
           - condition: template
             value_template: "{{ trigger.id in ['btn2', 'btn5', 'btn8'] }}"
         sequence:
-          - target:
+          - action: light.turn_on
+            target:
               entity_id: "{{ target_light }}"
             data:
               brightness_step_pct: "{{ 0 - step_pct }}"
               transition: "{{ trans_time }}"
-            action: light.turn_on
