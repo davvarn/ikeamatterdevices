@@ -1,7 +1,7 @@
 blueprint:
-  name: IKEA Bilresa (Fjärr med skroll) - Smart Light Control
+  name: IKEA Bilresa (Remote with scroll) - Smart Light Control
   description: |
-    Control your lights with the IKEA Bilresa/Fjärr med skroll remote via Matter.
+    Control your lights with the IKEA Bilresa(Remote with scroll) via Matter.
     
     **Features:**
     - 3 independent groups (9 buttons total)
@@ -14,6 +14,17 @@ blueprint:
     - Buttons 4-6: Group 2  
     - Buttons 7-9: Group 3
     
+    Select corresponding button ID (1-9) for each button input.
+    Button 1 = button 1 for correct remote, button 2 = button 2, etc.
+
+
+    Group 1 Light: The first light/output you want to control with first group of buttons. Scroll, on/off, longhold for changing color temp.
+    And so on.
+
+    Brightness Step for how much each scroll step should change brightness (in percent).
+    Transition Time for smooth brightness changes (in seconds).
+    Color Temperatures (in Kelvin) for warm, neutral and cool white.
+
     **Setup:** Find your button entities in Developer Tools → States, they look like "event.your_remote_name_button_1" through "button_9"
     
   domain: automation
