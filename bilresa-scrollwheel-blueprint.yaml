@@ -17,12 +17,12 @@ blueprint:
   domain: automation
   
   input:
-    remote_device:
-      name: IKEA Bilresa Remote
-      description: Select your IKEA Bilresa/Fjärr med skroll remote device
+    remote_name:
+      name: Remote Name
+      description: Enter the name of your remote (e.g., "fjarr_med_skroll"). The blueprint will automatically find all 9 button entities.
+      default: "fjarr_med_skroll"
       selector:
-        device:
-          integration: matter
+        text:
     
     group1_light:
       name: Group 1 Light (Buttons 1-3)
@@ -106,60 +106,36 @@ blueprint:
 mode: restart
 max_exceeded: silent
 
+variables:
+  remote_base: !input remote_name
+
 trigger:
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_1
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_1"
     id: btn1
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_2
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_2"
     id: btn2
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_3
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_3"
     id: btn3
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_4
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_4"
     id: btn4
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_5
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_5"
     id: btn5
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_6
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_6"
     id: btn6
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_7
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_7"
     id: btn7
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_8
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_8"
     id: btn8
-  - platform: device
-    domain: matter
-    device_id: !input remote_device
-    type: action
-    subtype: button_9
+  - platform: state
+    entity_id: "event.{{ remote_base }}_button_9"
     id: btn9
 
 action:
@@ -180,7 +156,7 @@ action:
         {% else %}
           {{ group3 }}
         {% endif %}
-      is_long: "{{ trigger.event.type == 'long_press' }}"
+      is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
   - choose:
       - conditions:
           - condition: template
