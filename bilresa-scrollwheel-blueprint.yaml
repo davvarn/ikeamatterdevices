@@ -17,77 +17,13 @@ blueprint:
   domain: automation
   
   input:
-    remote_button_1:
-      name: Remote Button 1 Event
-      description: Select the button 1 event entity
+    remote_device:
+      name: IKEA Bilresa Remote
+      description: Select your IKEA Bilresa/Fjärr med skroll remote device
       selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_2:
-      name: Remote Button 2 Event
-      description: Select the button 2 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_3:
-      name: Remote Button 3 Event
-      description: Select the button 3 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_4:
-      name: Remote Button 4 Event
-      description: Select the button 4 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_5:
-      name: Remote Button 5 Event
-      description: Select the button 5 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_6:
-      name: Remote Button 6 Event
-      description: Select the button 6 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_7:
-      name: Remote Button 7 Event
-      description: Select the button 7 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_8:
-      name: Remote Button 8 Event
-      description: Select the button 8 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
-    
-    remote_button_9:
-      name: Remote Button 9 Event
-      description: Select the button 9 event entity
-      selector:
-        entity:
-          filter:
-            - domain: event
+        device:
+          integration: matter
+          model: "Fjärr med skroll"
     
     group1_light:
       name: Group 1 Light (Buttons 1-3)
@@ -171,46 +107,81 @@ blueprint:
 mode: restart
 max_exceeded: silent
 
-triggers:
-  - entity_id: !input remote_button_1
+trigger:
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_1
     id: btn1
-    trigger: state
-  - entity_id: !input remote_button_2
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_2
     id: btn2
-    trigger: state
-  - entity_id: !input remote_button_3
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_3
     id: btn3
-    trigger: state
-  - entity_id: !input remote_button_4
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_4
     id: btn4
-    trigger: state
-  - entity_id: !input remote_button_5
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_5
     id: btn5
-    trigger: state
-  - entity_id: !input remote_button_6
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_6
     id: btn6
-    trigger: state
-  - entity_id: !input remote_button_7
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_7
     id: btn7
-    trigger: state
-  - entity_id: !input remote_button_8
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_8
     id: btn8
-    trigger: state
-  - entity_id: !input remote_button_9
+  - platform: device
+    domain: matter
+    device_id: !input remote_device
+    type: action
+    subtype: button_9
     id: btn9
-    trigger: state
 
-actions:
+action:
   - variables:
+      group1: !input group1_light
+      group2: !input group2_light
+      group3: !input group3_light
+      warm_temp: !input temp_warm
+      neutral_temp: !input temp_neutral
+      cool_temp: !input temp_cool
+      step_pct: !input brightness_step
+      trans_time: !input transition_time
       target_light: >
         {% if trigger.id in ['btn1', 'btn2', 'btn3'] %}
-          !input group1_light
+          {{ group1 }}
         {% elif trigger.id in ['btn4', 'btn5', 'btn6'] %}
-          !input group2_light
+          {{ group2 }}
         {% else %}
-          !input group3_light
+          {{ group3 }}
         {% endif %}
-      is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
+      is_long: "{{ trigger.event.type == 'long_press' }}"
   - choose:
       - conditions:
           - condition: template
@@ -220,13 +191,13 @@ actions:
               entity_id: "{{ target_light }}"
             data:
               color_temp_kelvin: >
-                {% set current = state_attr(target_light, 'color_temp_kelvin') | int(!input temp_warm) %}
-                {% if current < !input temp_neutral %}
-                  !input temp_neutral
-                {% elif current < !input temp_cool %}
-                  !input temp_cool
+                {% set current = state_attr(target_light, 'color_temp_kelvin') | int(warm_temp) %}
+                {% if current < neutral_temp %}
+                  {{ neutral_temp }}
+                {% elif current < cool_temp %}
+                  {{ cool_temp }}
                 {% else %}
-                  !input temp_warm
+                  {{ warm_temp }}
                 {% endif %}
             action: light.turn_on
       - conditions:
@@ -243,8 +214,8 @@ actions:
           - target:
               entity_id: "{{ target_light }}"
             data:
-              brightness_step_pct: !input brightness_step
-              transition: !input transition_time
+              brightness_step_pct: "{{ step_pct }}"
+              transition: "{{ trans_time }}"
             action: light.turn_on
       - conditions:
           - condition: template
@@ -253,6 +224,6 @@ actions:
           - target:
               entity_id: "{{ target_light }}"
             data:
-              brightness_step_pct: "{{ 0 - (!input brightness_step) }}"
-              transition: !input transition_time
+              brightness_step_pct: "{{ 0 - step_pct }}"
+              transition: "{{ trans_time }}"
             action: light.turn_on
