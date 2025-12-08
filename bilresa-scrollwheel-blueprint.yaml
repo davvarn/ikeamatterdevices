@@ -98,7 +98,7 @@ blueprint:
             - domain: event
           multiple: false
     
-    zone1_light:
+    group1_light:
       name: Group 1 Light (Buttons 1-3)
       description: Light(s) controlled by buttons 1-3
       selector:
@@ -107,7 +107,7 @@ blueprint:
             - domain: light
           multiple: false
     
-    zone2_light:
+    group2_light:
       name: Group 2 Light (Buttons 4-6)
       description: Light(s) controlled by buttons 4-6
       selector:
@@ -116,7 +116,7 @@ blueprint:
             - domain: light
           multiple: false
     
-    zone3_light:
+    group3_light:
       name: Group 3 Light (Buttons 7-9)
       description: Light(s) controlled by buttons 7-9
       selector:
@@ -124,13 +124,6 @@ blueprint:
           filter:
             - domain: light
           multiple: false
-    
-    enable_color_temp_cycle:
-      name: Enable Color Temperature Cycling
-      description: Enable long press on middle buttons to cycle through color temperatures
-      default: true
-      selector:
-        boolean:
     
     brightness_step:
       name: Brightness Step
@@ -153,6 +146,13 @@ blueprint:
           max: 5.0
           step: 0.5
           unit_of_measurement: "s"
+    
+    enable_color_temp_cycle:
+      name: Enable Color Temperature Cycling
+      description: Enable long press on middle buttons to cycle through color temperatures
+      default: true
+      selector:
+        boolean:
     
     temp_warm:
       name: Warm Color Temperature
@@ -223,11 +223,11 @@ actions:
   - variables:
       target_light: >
         {% if trigger.id in ['btn1', 'btn2', 'btn3'] %}
-          {{ zone1_light }}
+          {{ group1_light }}
         {% elif trigger.id in ['btn4', 'btn5', 'btn6'] %}
-          {{ zone2_light }}
+          {{ group2_light }}
         {% else %}
-          {{ zone3_light }}
+          {{ group3_light }}
         {% endif %}
       is_long: "{{ trigger.to_state.attributes.event_type == 'long_press' }}"
       warm_temp: !input temp_warm
@@ -241,11 +241,7 @@ actions:
       # Middle button long press - cycle color temperature (if enabled)
       - conditions:
           - condition: template
-            value_template: "{{ color_temp_enabled == true }}"
-          - condition: template
-            value_template: "{{ is_long == true }}"
-          - condition: template
-            value_template: "{{ trigger.id in ['btn3', 'btn6', 'btn9'] }}"
+            value_template: "{{ color_temp_enabled and is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
         sequence:
           - action: light.turn_on
             target:
