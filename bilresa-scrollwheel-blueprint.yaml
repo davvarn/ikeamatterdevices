@@ -1,7 +1,7 @@
 blueprint:
   name: IKEA Bilresa (Fjärr med skroll) - Smart Light Control
   description: |
-    Control your lights with the IKEA Bilresa/Fjärr med skroll remote (Matter/Zigbee).
+    Control your lights with the IKEA Bilresa/Fjärr med skroll remote via Matter.
     
     **Features:**
     - 3 independent zones (top, middle, bottom rows)
@@ -10,25 +10,96 @@ blueprint:
     - Middle button long press: cycle color temperature (warm → neutral → cool)
     
     **Button Layout:**
-    - Buttons 1-3: Zone 1 (top row)
-    - Buttons 4-6: Zone 2 (middle row)  
-    - Buttons 7-9: Zone 3 (bottom row)
+    - Buttons 1-3: Group 1 (top row)
+    - Buttons 4-6: Group 2 (middle row)  
+    - Buttons 7-9: Group 3 (bottom row)
     
   domain: automation
   
   input:
-    remote_device:
-      name: IKEA Bilresa Remote
-      description: Select your IKEA Bilresa/Fjärr med skroll remote
+    remote_button_1:
+      name: Remote Button 1 Event
+      description: Select the button 1 event entity from your remote
       selector:
-        device:
+        entity:
           filter:
-            - integration: matter
-              model: "Fjärr med skroll"
+            - domain: event
+          multiple: false
+    
+    remote_button_2:
+      name: Remote Button 2 Event
+      description: Select the button 2 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_3:
+      name: Remote Button 3 Event
+      description: Select the button 3 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_4:
+      name: Remote Button 4 Event
+      description: Select the button 4 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_5:
+      name: Remote Button 5 Event
+      description: Select the button 5 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_6:
+      name: Remote Button 6 Event
+      description: Select the button 6 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_7:
+      name: Remote Button 7 Event
+      description: Select the button 7 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_8:
+      name: Remote Button 8 Event
+      description: Select the button 8 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
+          multiple: false
+    
+    remote_button_9:
+      name: Remote Button 9 Event
+      description: Select the button 9 event entity from your remote
+      selector:
+        entity:
+          filter:
+            - domain: event
           multiple: false
     
     zone1_light:
-      name: Zone 1 Light (Top Row - Buttons 1-3)
+      name: Group 1 Light (Top Row - Buttons 1-3)
       description: Light(s) controlled by the top row of buttons
       selector:
         entity:
@@ -37,7 +108,7 @@ blueprint:
           multiple: false
     
     zone2_light:
-      name: Zone 2 Light (Middle Row - Buttons 4-6)
+      name: Group 2 Light (Middle Row - Buttons 4-6)
       description: Light(s) controlled by the middle row of buttons
       selector:
         entity:
@@ -46,13 +117,20 @@ blueprint:
           multiple: false
     
     zone3_light:
-      name: Zone 3 Light (Bottom Row - Buttons 7-9)
+      name: Group 3 Light (Bottom Row - Buttons 7-9)
       description: Light(s) controlled by the bottom row of buttons
       selector:
         entity:
           filter:
             - domain: light
           multiple: false
+    
+    enable_color_temp_cycle:
+      name: Enable Color Temperature Cycling
+      description: Enable long press on middle buttons to cycle through color temperatures
+      default: true
+      selector:
+        boolean:
     
     brightness_step:
       name: Brightness Step
@@ -114,40 +192,31 @@ max_exceeded: silent
 
 triggers:
   - trigger: state
-    entity_id: 
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_1
+    entity_id: !input remote_button_1
     id: btn1
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_2
+    entity_id: !input remote_button_2
     id: btn2
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_3
+    entity_id: !input remote_button_3
     id: btn3
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_4
+    entity_id: !input remote_button_4
     id: btn4
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_5
+    entity_id: !input remote_button_5
     id: btn5
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_6
+    entity_id: !input remote_button_6
     id: btn6
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_7
+    entity_id: !input remote_button_7
     id: btn7
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_8
+    entity_id: !input remote_button_8
     id: btn8
   - trigger: state
-    entity_id:
-      - event.{{remote_device | replace('_', '_') | regex_findall_index('.*_(.+)', 0, '') | default('fjarr_med_skroll')}}_button_9
+    entity_id: !input remote_button_9
     id: btn9
 
 actions:
@@ -166,12 +235,13 @@ actions:
       cool_temp: !input temp_cool
       step_pct: !input brightness_step
       transition_sec: !input transition_time
+      color_temp_enabled: !input enable_color_temp_cycle
   
   - choose:
-      # Middle button long press - cycle color temperature
+      # Middle button long press - cycle color temperature (if enabled)
       - conditions:
           - condition: template
-            value_template: "{{ is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
+            value_template: "{{ color_temp_enabled and is_long and trigger.id in ['btn3', 'btn6', 'btn9'] }}"
         sequence:
           - action: light.turn_on
             target:
